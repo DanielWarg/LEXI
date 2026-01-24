@@ -449,18 +449,42 @@ async def get_audio_devices(sid):
         outputs = [{"index": i, "name": name} for i, name in output_devices]
         
         # Default Logic for Microphone
-        if "input_device_index" not in SETTINGS or SETTINGS["input_device_index"] is None:
-            # Try to find a built-in microphone
-            default_index = 0
-            for i, name in input_devices:
-                lower_name = name.lower()
-                if "built-in" in lower_name or "internal" in lower_name or "macbook" in lower_name:
-                    default_index = i
-                    break # Take the first built-in found
-            
-            print(f"Auto-setting default microphone to index {default_index}")
-            SETTINGS["input_device_index"] = default_index
+        # Check if current setting is valid/internal or needs reset
+        current_idx = SETTINGS.get("input_device_index")
+        
+        # Find best internal candidate
+        internal_candidate = None
+        for i, name in input_devices:
+            lower_name = name.lower()
+            if "built-in" in lower_name or "internal" in lower_name or "macbook" in lower_name:
+                internal_candidate = i
+                break 
+
+        # If we have an internal candidate, ensure we are using it unless user explicitly chose a specific external NON-PHONE device (optional, but user said ALWAYS internal)
+        # Actually user said "always internal not external". Let's be aggressive against Phones.
+        
+        should_switch = False
+        if current_idx is None:
+            should_switch = True
+        else:
+            # Check if current device is a Phone
+            current_name = next((name for i, name in input_devices if i == current_idx), "")
+            if "iphone" in current_name.lower() or "continuity" in current_name.lower():
+                print(f"Current mic '{current_name}' is external/phone. Switching to internal.")
+                should_switch = True
+        
+        if should_switch and internal_candidate is not None:
+            print(f"Auto-setting default microphone to index {internal_candidate} (Internal)")
+            SETTINGS["input_device_index"] = internal_candidate
             save_settings()
+            
+            # Restart ADA to apply the new default immediately
+            if audio_loop:
+                print("Restarting AudioLoop to apply auto-switch to internal mic...")
+                await initialize_ada(
+                    device_index=SETTINGS.get("input_device_index"),
+                    video_device_index=SETTINGS.get("video_device_index")
+                )
 
         await sio.emit('audio_devices', {'inputs': inputs, 'outputs': outputs})
         print(f"Sent {len(inputs)} inputs and {len(outputs)} outputs")
@@ -475,7 +499,7 @@ async def get_video_devices(sid):
         devices = ada.get_video_devices() # List of (index, name)
         
         formatted = []
-        internal_index = None # Start with None to detect if we found one
+        internal_index = None 
         
         for i, name in devices:
              is_internal = "facetime" in name.lower() or "built-in" in name.lower() or "internal" in name.lower()
@@ -485,20 +509,37 @@ async def get_video_devices(sid):
                  "is_internal": is_internal
              })
              
-             # Capture the first internal camera found
              if is_internal and internal_index is None:
                  internal_index = i
         
-        # Fallback to 0 if no internal camera found
         if internal_index is None and devices:
             internal_index = 0
 
-        # Ensure default is set to internal if not already set
-        if "video_device_index" not in SETTINGS or SETTINGS["video_device_index"] is None:
-             if internal_index is not None:
-                print(f"Auto-setting default camera to index {internal_index}")
-                SETTINGS["video_device_index"] = internal_index
-                save_settings()
+        # Enforce Internal Camera
+        current_idx = SETTINGS.get("video_device_index")
+        should_switch = False
+        
+        if current_idx is None:
+            should_switch = True
+        else:
+             # Check if current is phone
+             current_name = next((name for i, name in devices if i == current_idx), "")
+             if "iphone" in current_name.lower() or "continuity" in current_name.lower():
+                 print(f"Current camera '{current_name}' is external/phone. Switching to internal.")
+                 should_switch = True
+
+        if should_switch and internal_index is not None:
+            print(f"Auto-setting default camera to index {internal_index} (Internal)")
+            SETTINGS["video_device_index"] = internal_index
+            save_settings()
+            
+            # Restart ADA to apply the new default immediately
+            if audio_loop:
+                print("Restarting AudioLoop to apply auto-switch to internal camera...")
+                await initialize_ada(
+                    device_index=SETTINGS.get("input_device_index"),
+                    video_device_index=SETTINGS.get("video_device_index")
+                )
             
         await sio.emit('video_devices', formatted)
         print(f"Sent {len(formatted)} video devices")

@@ -77,12 +77,18 @@ export const VoiceWidget: React.FC = () => {
     };
 
     const handleToggleMute = () => {
-        if (!socket || !isSessionActive) return;
+        console.log('VoiceWidget: Mute Toggle Clicked. SessionActive:', isSessionActive, 'Current Muted:', isMuted);
+        if (!socket || !isSessionActive) {
+            console.warn('VoiceWidget: Toggle ignored - Socket/Session invalid');
+            return;
+        }
 
         if (isMuted) {
+            console.log('VoiceWidget: Emitting resume_audio');
             socket.emit('resume_audio');
             setIsMuted(false);
         } else {
+            console.log('VoiceWidget: Emitting pause_audio');
             socket.emit('pause_audio');
             setIsMuted(true);
         }

@@ -368,11 +368,15 @@ class AudioLoop:
 
     def set_paused(self, paused):
         self.paused = paused
+        if not paused:
+             # When resuming, flag the loop to clear the buffer so we don't process "ghost audio"
+             self._clear_buffer_on_next_loop = True
 
     def stop(self):
         self.stop_event.set()
         
     def resolve_tool_confirmation(self, request_id, confirmed):
+        # ... (unchanged)
         print(f"[ADA DEBUG] [RESOLVE] resolve_tool_confirmation called. ID: {request_id}, Confirmed: {confirmed}")
         if request_id in self._pending_confirmations:
             future = self._pending_confirmations[request_id]
@@ -385,7 +389,7 @@ class AudioLoop:
             print(f"[ADA DEBUG] [WARN] Confirmation Request {request_id} not found in pending dict. Keys: {list(self._pending_confirmations.keys())}")
 
     def clear_audio_queue(self):
-        """Clears the queue of pending audio chunks to stop playback immediately."""
+        # ... (unchanged)
         try:
             count = 0
             while not self.audio_in_queue.empty():
@@ -396,6 +400,7 @@ class AudioLoop:
         except Exception as e:
             print(f"[ADA DEBUG] [ERR] Failed to clear audio queue: {e}")
 
+    # ... send_frame ...
     async def send_frame(self, frame_data):
         # Update the latest frame payload
         if isinstance(frame_data, bytes):
@@ -415,10 +420,12 @@ class AudioLoop:
     async def listen_audio(self):
         mic_info = pya.get_default_input_device_info()
 
+        # ... (device resolution logic unchanged) ...
         # Resolve Input Device by Name if provided
         resolved_input_device_index = None
         
         if self.input_device_name:
+            # ... match logic ...
             print(f"[ADA] Attempting to find input device matching: '{self.input_device_name}'")
             count = pya.get_device_count()
             best_match = None
@@ -479,10 +486,24 @@ class AudioLoop:
         VAD_THRESHOLD = 800 # Adj based on mic sensitivity (800 is conservative for 16-bit)
         SILENCE_DURATION = 0.5 # Seconds of silence to consider "done speaking"
         
+        # Init flush flag
+        self._clear_buffer_on_next_loop = False
+
         while True:
             if self.paused:
                 await asyncio.sleep(0.1)
                 continue
+            
+            # Flush buffer if requested (e.g. after pause)
+            if self._clear_buffer_on_next_loop:
+                print("[ADA] Flushing audio buffer on resume...")
+                try:
+                    # Stop/Start stream clears the OS buffer effectively
+                    self.audio_stream.stop_stream()
+                    self.audio_stream.start_stream()
+                except Exception as e:
+                    print(f"[ADA] [WARN] Failed to flush buffer: {e}")
+                self._clear_buffer_on_next_loop = False
 
             try:
                 data = await asyncio.to_thread(self.audio_stream.read, CHUNK_SIZE, **kwargs)
