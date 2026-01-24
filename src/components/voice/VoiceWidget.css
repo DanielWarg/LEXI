@@ -1,0 +1,174 @@
+.voice-widget {
+    /* Remove fixed width, match parent */
+    width: 100%;
+
+    background: var(--bg-panel);
+    border: 1px solid var(--border-subtle);
+    border-radius: 12px;
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+    backdrop-filter: blur(10px);
+}
+
+.voice-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 4px;
+}
+
+.status-indicator {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    background: var(--text-muted);
+    position: relative;
+}
+
+/* ... keep animations ... */
+.status-indicator.listening {
+    background: var(--status-listening);
+    box-shadow: 0 0 10px var(--color-cyan-glow);
+}
+
+.status-indicator.speaking {
+    background: var(--status-speaking);
+    box-shadow: 0 0 10px var(--color-pink);
+}
+
+.pulse-ring {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+    border: 1px solid currentColor;
+    opacity: 0;
+    animation: pulse 2s infinite;
+}
+
+.status-indicator.listening .pulse-ring {
+    border-color: var(--status-listening);
+}
+
+@keyframes pulse {
+    0% {
+        width: 100%;
+        height: 100%;
+        opacity: 0.8;
+    }
+
+    100% {
+        width: 300%;
+        height: 300%;
+        opacity: 0;
+    }
+}
+
+.status-text {
+    font-size: 0.75rem;
+    font-weight: 600;
+    letter-spacing: 0.1em;
+    color: var(--text-muted);
+    flex-grow: 1;
+    margin-left: 12px;
+}
+
+.transcript-area {
+    min-height: 80px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    justify-content: flex-end;
+}
+
+.transcript-line {
+    font-size: 0.9rem;
+    line-height: 1.4;
+    color: var(--text-main);
+}
+
+.transcript-line.user {
+    opacity: 0.6;
+}
+
+.transcript-line .label {
+    font-size: 0.7rem;
+    font-weight: 700;
+    margin-right: 8px;
+    color: var(--text-muted);
+}
+
+.transcript-line.ai .label {
+    color: var(--color-pink);
+}
+
+.transcript-line p {
+    margin: 0;
+    display: inline;
+}
+
+.input-area {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    background: var(--bg-app);
+    border: 1px solid var(--border-subtle);
+    border-radius: 8px;
+    padding: 4px;
+}
+
+.input-area input {
+    background: transparent;
+    border: none;
+    color: var(--text-main);
+    flex-grow: 1;
+    font-size: 0.9rem;
+    outline: none;
+    padding: 8px 4px;
+}
+
+.icon-btn {
+    background: transparent;
+    border: none;
+    color: var(--text-muted);
+    cursor: pointer;
+    padding: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.mic-btn {
+    background: transparent;
+    border: none;
+    color: var(--text-muted);
+    padding: 8px;
+    cursor: pointer;
+    border-radius: 4px;
+    transition: all 0.2s;
+}
+
+.mic-btn.active {
+    color: var(--status-listening);
+    background: rgba(0, 243, 255, 0.1);
+}
+
+.send-btn {
+    background: var(--bg-tool);
+    border: none;
+    color: var(--text-main);
+    padding: 8px;
+    border-radius: 6px;
+    cursor: pointer;
+}
+
+.send-btn:hover {
+    background: var(--color-cyan);
+    color: #000;
+}

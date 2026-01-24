@@ -1,0 +1,48 @@
+.lexi-logo-icon {
+    width: 64px;
+    height: 64px;
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.logo-core {
+    width: 28px;
+    height: 28px;
+    /* Lighter: Transparent background, stroke only */
+    background: transparent;
+    border: 4px solid transparent;
+    /* Gradient border trick */
+    background: linear-gradient(var(--bg-app), var(--bg-app)) padding-box,
+        var(--gradient-lexi) border-box;
+
+    border-radius: 4px;
+    transform: rotate(45deg);
+    /* Subtler shadow */
+    box-shadow: 0 0 20px rgba(189, 0, 255, 0.3);
+    z-index: 2;
+}
+
+.logo-ring-inner {
+    position: absolute;
+    width: 52px;
+    height: 52px;
+    border: 1px solid transparent;
+    /* Thinner ring */
+    border-radius: 50%;
+    background: linear-gradient(var(--bg-app), var(--bg-app)) padding-box,
+        var(--gradient-lexi) border-box;
+    animation: spin-slow 12s linear infinite;
+    opacity: 0.8;
+}
+
+@keyframes spin-slow {
+    from {
+        transform: rotate(0deg);
+    }
+
+    to {
+        transform: rotate(360deg);
+    }
+}

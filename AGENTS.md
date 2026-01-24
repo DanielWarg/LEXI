@@ -12,11 +12,11 @@
   - Run single test: `.venv/bin/pytest backend/tests/test_filename.py::test_function_name`
 
 ### Frontend (`src/`)
-- **Stack:** React + Vite + **Tauri** (migrated from Electron 2026-01-18)
+- **Stack:** React 19 + TypeScript + Vite + **Tauri 2.0**
 - **Install:** `npm install`
-- **Dev Server (Tauri):** `npx tauri dev`
-- **Dev Server (Electron - fallback):** `npm run dev`
-- **Lint:** `npm run lint` (if configured)
+- **Dev Server (Tauri):** `npm run tauri dev`
+- **Dev Server (Browser-only):** `npm run dev`
+- **Lint:** `npm run lint`
 - **Build:** `npm run build`
 
 ---
@@ -34,21 +34,26 @@
   - Log errors with context: `print(f"[Module DEBUG] Error: {e}")`.
   - Do not swallow exceptions silently unless intended.
 
-### JavaScript/React (Frontend)
-- **Formatting:** Use 4-space indentation (matching existing files). Semicolons required.
-- **Components:** Functional components with Hooks (`useState`, `useEffect`).
-- **State Management:** Local state preferred; lift state up to `App.jsx` for global access (SocketIO data).
+### TypeScript/React (Frontend)
+- **Language:** TypeScript (`.tsx`, `.ts`). Strict mode enabled.
+- **Formatting:** Prettier/ESLint defaults (2 space indentation).
+- **Components:** Functional components with React 19 features (Hooks).
+- **Styling:** CSS Modules or global CSS variables for theming.
+- **State Management:**
+  - **Local:** `useState`, `useReducer`
+  - **Global:** React Context or lifted state for app-wide data (Socket.IO).
 - **Socket.IO:**
-  - Listeners: `socket.on('event', data => ...)` inside `useEffect`.
-  - Emitters: `socket.emit('event', payload)`.
-  - Clean up listeners in `useEffect` return function.
-- **Naming:** `PascalCase` for Components, `camelCase` for functions/variables.
+  - Use `socketService` singleton or context for clean architecture.
+  - Listeners: `useEffect` with cleanup function.
+- **Naming:** `PascalCase` for Components, `camelCase` for functions/variables/files.
 
 ### Project Structure
-- `backend/` - All Python logic, agents `(printer_agent.py, cad_agent.py)`, and server.
-- `src/components/` - React UI components.
+- `backend/` - All Python logic, agents and server.
+- `src/`
+  - `components/` - React UI components grouped by feature (e.g. `layout`, `modules`, `tools`).
+  - `lib/` - Utilities, types, and services (e.g. simulation, socket).
+  - `assets/` - Static images and logic.
 - `src-tauri/` - Tauri native shell (Rust).
-- `electron/` - Electron main process (deprecated fallback).
 
 ### Special Rules (Agentic Context)
 - **Surgical Changes:** When debugging, create a reproduction script or minimal test case first.
@@ -59,15 +64,13 @@
 
 ## 3. Project Status & Documentation
 
-### Current State (2026-01-18)
-- **Project Name:** Lexi (formerly A.D.A)
-- **Frontend:** Tauri (migrated from Electron)
-- **Language:** Swedish responses enforced (System Prompt updated)
-- **WebAgent:** ✅ Active and functional (core feature - DO NOT REMOVE)
-- **PrinterAgent:** ❌ Removed
-- **Hand Gestures:** ❌ Removed (UI, logic, props disabled; state remains for safety)
-- **CAD:** ❌ Removed (UI hidden, backend logic disabled, files deleted)
-- **Performance:** ✅ Optimized (Audio lag fixed, UI animations converted to CSS)
+### Current State (2026-01-24)
+- **Project Name:** Lexi
+- **Frontend:** **NEW** TypeScript/React 19 UI (Integrated from `lexi-ui`)
+- **Backend:** Python FastApi/Socket.IO
+- **WebAgent:** ✅ Active and functional
+- **Voice/Audio:** ✅ Restored and verified
+- **Performance:** ✅ Optimized (Hardware accelerated animations)
 
 ### Key Architectural Insight: React Prop Dependencies
 When adding or removing features, follow this order to avoid black screen:
@@ -87,19 +90,14 @@ When adding or removing features, follow this order to avoid black screen:
 
 ### Git Tags
 - `v1.0-webagent-working`: Stable base with WebAgent
-- `v1.1-lag-debugging`: Debug state for audio lag investigation
-- `stable-voice-restore-point`: (Tag) Verified working state before CAD cleanup (Voice OK, CAD UI Hidden)
+- `stable-voice-restore-point`: (Tag) Verified working state before CAD cleanup
+- `ui-revamp-merged`: (Recommended Tag) Post integration of new TypeScript UI
 
 ---
 
 ## 4. Next Steps
 
-### 🎯 Active: UI Revamp
-See **[docs/UI_REVAMP_PLAN.md](docs/UI_REVAMP_PLAN.md)** for full implementation plan.
-
-**Priorities:**
-1. ✅ Everything functional
-2. 🔄 Lexi Sphere — Breathing 3D visualization
-3. 🔄 Compact bottom menu — TARS-inspired
-4. 🔄 Unified popups — WebAgent at 90% viewport
-
+### 🎯 Active: UI Polish & Feature Re-integration
+1. ✅ **Migrate UI:** Moved `lexi-ui` codebase into main `Lexi` repo.
+2. 🔄 **Verify Integrations:** Ensure backend socket events map correctly to new frontend components.
+3. 🔄 **Clean up:** Remove unused assets from old Electron implementation if any remain.

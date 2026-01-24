@@ -1,0 +1,105 @@
+.settings-view {
+    width: 100%;
+    height: 100%;
+    padding: 32px;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 32px;
+    overflow-y: auto;
+}
+
+.settings-column {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.settings-header {
+    font-family: 'Syncopate', sans-serif;
+    font-size: 0.9rem;
+    color: var(--color-cyan);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    border-bottom: 1px solid var(--border-subtle);
+    padding-bottom: 8px;
+    margin: 0 0 8px 0;
+}
+
+.setting-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 12px;
+    background: var(--bg-panel);
+    border: 1px solid var(--border-subtle);
+    border-radius: 8px;
+    font-size: 0.85rem;
+    color: var(--text-main);
+}
+
+.permissions-list {
+    max-height: 400px;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.toggle-switch {
+    position: relative;
+    width: 40px;
+    height: 20px;
+    border-radius: 20px;
+    border: none;
+    cursor: pointer;
+    background: #333;
+    transition: background 0.3s;
+}
+
+.toggle-switch.on {
+    background: var(--color-cyan);
+    box-shadow: 0 0 10px var(--color-cyan-glow);
+}
+
+.toggle-handle {
+    position: absolute;
+    top: 2px;
+    left: 2px;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background: white;
+    transition: transform 0.3s;
+}
+
+.toggle-switch.on .toggle-handle {
+    transform: translateX(20px);
+}
+
+.setting-group {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.setting-group label {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.dark-select {
+    background: var(--bg-panel);
+    border: 1px solid var(--border-subtle);
+    color: white;
+    padding: 8px;
+    border-radius: 6px;
+    font-size: 0.9rem;
+    outline: none;
+}
+
+.dark-select:focus {
+    border-color: var(--color-cyan);
+}

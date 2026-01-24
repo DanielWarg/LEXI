@@ -1,33 +1,85 @@
-@import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&display=swap');
+/* Import Fonts: Syncopate (Logo), Inter (Body) */
+@import url('https://fonts.googleapis.com/css2?family=Syncopate:wght@400;700&family=Inter:wght@300;400;500;600&display=swap');
 
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+:root {
+  /* Base Backgrounds */
+  --bg-app: #05080a;
+  --bg-panel: #0f1620;
+  --bg-tool: #1a2433;
+
+  /* Accents */
+  --color-cyan: #00f3ff;
+  --color-cyan-glow: rgba(0, 243, 255, 0.4);
+  --color-cyan-dim: rgba(0, 243, 255, 0.5);
+
+  /* 
+     "gör gradient lite mer markant från rosa till purple"
+     Using high-saturation neon colors.
+     Pink: #FF00CC (Electric Pink)
+     Purple: #AA00FF (Vibrant Violet)
+  */
+  --color-pink: #ff00cc;
+  --color-purple: #aa00ff;
+
+  /* Steep angle (45deg or 135deg) for sharp contrast */
+  --gradient-lexi: linear-gradient(90deg, #ff00cc 0%, #aa00ff 100%);
+
+  /* Text */
+  --text-main: #ffffff;
+  --text-muted: #94a3b8;
+  --text-header: var(--color-cyan);
+
+  /* Borders */
+  --border-subtle: #1e293b;
+  --border-active: var(--color-cyan);
+
+  /* Status */
+  --status-listening: var(--color-pink);
+
+  /* Spacing */
+  --spacing-unit: 8px;
+}
+
+/* GLOBAL RESET */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
 
 body {
   margin: 0;
-  background-color: #000;
+  padding: 0;
+  font-family: 'Inter', -apple-system, sans-serif;
+  background-color: var(--bg-app);
+  color: var(--text-main);
   overflow: hidden;
+  height: 100vh;
+  width: 100vw;
+  -webkit-font-smoothing: antialiased;
 }
 
-/* Custom Scrollbar Hide */
-.scrollbar-hide::-webkit-scrollbar {
-    display: none;
-}
-.scrollbar-hide {
-    -ms-overflow-style: none;
-    scrollbar-width: none;
+#root {
+  height: 100%;
+  width: 100%;
 }
 
-.mask-image-gradient {
-  mask-image: linear-gradient(to bottom, transparent, black 10%, black 90%, transparent);
+/* Global Icon Styling Override */
+svg.lucide {
+  color: var(--color-cyan);
 }
 
-@keyframes fadeIn {
-  from { opacity: 0; }
-  to { opacity: 1; }
+/* Scrollbar styling */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
 }
 
-.animate-fade-in {
-  animation: fadeIn 0.3s ease-out forwards;
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--bg-tool);
+  border-radius: 3px;
 }

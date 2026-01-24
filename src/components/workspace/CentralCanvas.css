@@ -1,0 +1,176 @@
+.central-canvas {
+    /* ... existing styles ... */
+    width: 98%;
+    height: calc(100% - 20px);
+    margin: 10px 1% 10px 1%;
+
+    background-image: radial-gradient(var(--border-subtle) 1px, transparent 1px);
+    background-size: 24px 24px;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    overflow: hidden;
+
+    border: 2px dashed rgba(255, 255, 255, 0.05);
+    border-radius: 20px;
+}
+
+/* Container directly for the Real Views */
+.active-tool-container {
+    width: 100%;
+    height: 100%;
+    /* No padding on container itself to allow full bleed if needed */
+    background: rgba(0, 0, 0, 0.5);
+}
+
+/* ... Keep previous animation and placeholder styles for non-ported tools ... */
+.workspace-area.empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    height: 100%;
+}
+
+.empty-state-label {
+    margin-top: 1.5rem;
+    color: var(--text-main);
+    font-family: 'Syncopate', sans-serif;
+    font-size: 0.75rem;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    font-weight: 700;
+    opacity: 0.6;
+    z-index: 5;
+}
+
+/* Tool View Styles (Placeholders) */
+.active-tool-view {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    padding: 12px;
+    background: rgba(0, 0, 0, 0.3);
+}
+
+.tool-view-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid var(--border-subtle);
+    padding-bottom: 8px;
+    margin-bottom: 8px;
+    flex-shrink: 0;
+}
+
+.tool-view-header h2 {
+    margin: 0;
+    font-family: 'Syncopate', sans-serif;
+    font-weight: 700;
+    color: var(--color-cyan);
+    font-size: 1.2rem;
+}
+
+.live-indicator {
+    color: #ff0055;
+    font-weight: 600;
+    font-size: 0.7rem;
+    letter-spacing: 0.1em;
+    animation: pulse-red 2s infinite;
+}
+
+@keyframes pulse-red {
+    0% {
+        opacity: 1;
+    }
+
+    50% {
+        opacity: 0.5;
+    }
+
+    100% {
+        opacity: 1;
+    }
+}
+
+.tool-placeholder-content {
+    flex-grow: 1;
+    width: 100%;
+    border: 1px solid var(--border-subtle);
+    border-radius: 8px;
+    background: rgba(255, 255, 255, 0.02);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+    overflow: hidden;
+    position: relative;
+}
+
+.ripple-container {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+}
+
+.core-logo-text {
+    font-family: 'Syncopate', sans-serif;
+    font-size: 4rem;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    background: var(--gradient-lexi);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    filter: drop-shadow(0 0 20px rgba(189, 0, 255, 0.5));
+    z-index: 10;
+}
+
+.ripple-ring {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    border-radius: 50%;
+    border: 1px solid transparent;
+    width: 100px;
+    height: 100px;
+    background: linear-gradient(var(--bg-app), var(--bg-app)) padding-box,
+        var(--gradient-lexi) border-box;
+    opacity: 0;
+    animation: ripple-spread 8s cubic-bezier(0, 0.2, 0.8, 1) infinite;
+}
+
+.delay-0 {
+    animation-delay: 0s;
+}
+
+.delay-1 {
+    animation-delay: 2.5s;
+}
+
+.delay-2 {
+    animation-delay: 5s;
+}
+
+@keyframes ripple-spread {
+    0% {
+        width: 60px;
+        height: 60px;
+        opacity: 0.5;
+        border-width: 2px;
+    }
+
+    100% {
+        width: 900px;
+        height: 900px;
+        opacity: 0;
+        border-width: 0px;
+    }
+}

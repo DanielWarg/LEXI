@@ -1,0 +1,65 @@
+.dock-bar {
+    background: var(--bg-panel);
+    border: 1px solid var(--border-subtle);
+    border-radius: 16px;
+    padding: 8px 16px;
+
+    display: flex;
+    align-items: center;
+    gap: 12px;
+
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+    pointer-events: auto;
+}
+
+.dock-item {
+    background: transparent;
+    border: none;
+    /* Icons are Cyan by default via global svg rule, but we enforce here if needed */
+    color: var(--color-cyan);
+    padding: 10px;
+    border-radius: 10px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    position: relative;
+    opacity: 0.7;
+    /* Default state slightly varied */
+}
+
+.dock-item:hover {
+    background: var(--bg-tool);
+    opacity: 1;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+    text-shadow: 0 0 8px var(--color-cyan);
+}
+
+.dock-item.active {
+    color: var(--color-cyan);
+    background: rgba(0, 243, 255, 0.1);
+    box-shadow: 0 0 15px rgba(0, 243, 255, 0.15);
+    opacity: 1;
+}
+
+/* Active Indicator Dot */
+.dock-item.active::after {
+    content: '';
+    position: absolute;
+    bottom: 0px;
+    width: 4px;
+    height: 4px;
+    border-radius: 50%;
+    background: var(--color-cyan);
+}
+
+.dock-divider {
+    width: 1px;
+    height: 24px;
+    background: var(--border-subtle);
+    margin: 0 4px;
+}
