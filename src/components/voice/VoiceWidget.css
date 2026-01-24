@@ -80,108 +80,60 @@
 }
 
 .transcript-area {
-    min-height: 80px;
+    min-height: 150px;
+    max-height: 300px;
+    overflow-y: auto;
     display: flex;
     flex-direction: column;
     gap: 8px;
-    justify-content: flex-end;
+    justify-content: flex-start;
+    /* Change to start so we scroll down */
+    margin-bottom: 12px;
+    padding-right: 4px;
+    /* Space for scrollbar */
+}
+
+/* Custom Scrollbar for transcript */
+.transcript-area::-webkit-scrollbar {
+    width: 6px;
+}
+
+.transcript-area::-webkit-scrollbar-track {
+    background: rgba(0, 0, 0, 0.1);
+    border-radius: 3px;
+}
+
+.transcript-area::-webkit-scrollbar-thumb {
+    background: var(--border-focus);
+    border-radius: 3px;
 }
 
 .transcript-line {
     font-size: 0.9rem;
     line-height: 1.4;
     color: var(--text-main);
-}
-
-.transcript-line.user {
-    opacity: 0.6;
-}
-
-.transcript-line .label {
-    font-size: 0.7rem;
-    font-weight: 700;
-    margin-right: 8px;
-    color: var(--text-muted);
-}
-
-.transcript-line.ai .label {
-    color: var(--color-pink);
-}
-
-.transcript-line p {
-    margin: 0;
-    display: inline;
-}
-
-.input-area {
-    display: flex;
-    gap: 4px;
-    align-items: center;
-    background: var(--bg-app);
-    border: 1px solid var(--border-subtle);
-    border-radius: 8px;
-    padding: 4px;
-    flex-wrap: nowrap;
-    min-width: 0;
-}
-
-.input-area input {
-    background: transparent;
-    border: none;
-    color: var(--text-main);
-    flex-grow: 1;
-    font-size: 0.9rem;
-    outline: none;
-    padding: 8px 4px;
-}
-
-.icon-btn {
-    background: transparent;
-    border: none;
-    color: var(--text-muted);
-    cursor: pointer;
-    padding: 4px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
-
-.mic-btn {
-    background: transparent;
-    border: none;
-    color: var(--text-muted);
-    padding: 8px;
-    cursor: pointer;
-    border-radius: 4px;
-    transition: all 0.2s;
     flex-shrink: 0;
+    /* Prevent crushing */
 }
 
-.mic-btn.active {
-    color: var(--status-listening);
-    background: rgba(0, 243, 255, 0.1);
-}
+/* ... existing styles ... */
 
+.icon-btn,
+.mic-btn,
+.session-btn,
 .send-btn {
-    background: var(--bg-tool);
-    border: none;
-    color: var(--text-main);
-    padding: 8px;
-    border-radius: 6px;
-    cursor: pointer;
-    flex-shrink: 0;
-}
-
-.send-btn:hover:not(:disabled) {
-    background: var(--color-cyan);
-    color: #000;
+    position: relative;
+    /* Ensure z-index applies */
+    z-index: 10;
 }
 
 .send-btn:disabled,
 .mic-btn:disabled,
 .session-btn:disabled {
-    opacity: 0.4;
+    opacity: 0.5;
     cursor: not-allowed;
+    /* Do NOT use pointer-events: none, so we can show tooltips if needed, 
+       but for now standard disabled behavior is effectively 'blocked' interaction */
 }
 
 .session-btn {

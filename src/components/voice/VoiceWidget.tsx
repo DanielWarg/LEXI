@@ -29,14 +29,34 @@ export const VoiceWidget: React.FC = () => {
 
         const handleTranscription = (data: any) => {
             if (data.text) {
-                setHistory(prev => [
-                    ...prev.slice(-10), // Keep last 10 items
-                    {
-                        text: data.text,
-                        speaker: data.speaker || 'ai',
-                        timestamp: new Date()
+                setHistory(prev => {
+                    // Map backend 'sender' to frontend 'speaker'
+                    // Backend sends "ADA" or "User" in 'sender' field.
+                    const incomingSpeaker = (data.sender === 'User' || data.speaker === 'user') ? 'user' : 'ai';
+
+                    const lastMsg = prev[prev.length - 1];
+
+                    // If we have a last message and it's from the same speaker, append text
+                    if (lastMsg && lastMsg.speaker === incomingSpeaker) {
+                        const newHistory = [...prev];
+                        newHistory[newHistory.length - 1] = {
+                            ...lastMsg,
+                            text: lastMsg.text + data.text,
+                            timestamp: new Date() // Update timestamp to latest activity
+                        };
+                        return newHistory;
                     }
-                ]);
+
+                    // Otherwise create new message bubble
+                    return [
+                        ...prev.slice(-100), // Keep last 100 items (increased from 10)
+                        {
+                            text: data.text,
+                            speaker: incomingSpeaker,
+                            timestamp: new Date()
+                        }
+                    ];
+                });
             }
         };
 
