@@ -41,7 +41,7 @@ export const VoiceWidget: React.FC = () => {
                         const newHistory = [...prev];
                         newHistory[newHistory.length - 1] = {
                             ...lastMsg,
-                            text: lastMsg.text + data.text,
+                            text: lastMsg.text + (lastMsg.text.endsWith(' ') ? '' : ' ') + data.text,
                             timestamp: new Date() // Update timestamp to latest activity
                         };
                         return newHistory;
