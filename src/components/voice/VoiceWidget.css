@@ -117,6 +117,90 @@
 
 /* ... existing styles ... */
 
+.transcript-line.user {
+    opacity: 0.6;
+}
+
+.transcript-line .label {
+    font-size: 0.7rem;
+    font-weight: 700;
+    margin-right: 8px;
+    color: var(--text-muted);
+}
+
+.transcript-line.ai .label {
+    color: var(--color-pink);
+}
+
+.transcript-line p {
+    margin: 0;
+    display: inline;
+}
+
+.input-area {
+    display: flex;
+    gap: 4px;
+    align-items: center;
+    background: var(--bg-app);
+    border: 1px solid var(--border-subtle);
+    border-radius: 8px;
+    padding: 4px;
+    flex-wrap: nowrap;
+    min-width: 0;
+}
+
+.input-area input {
+    background: transparent;
+    border: none;
+    color: var(--text-main);
+    flex-grow: 1;
+    font-size: 0.9rem;
+    outline: none;
+    padding: 8px 4px;
+}
+
+.icon-btn {
+    background: transparent;
+    border: none;
+    color: var(--text-muted);
+    cursor: pointer;
+    padding: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.mic-btn {
+    background: transparent;
+    border: none;
+    color: var(--text-muted);
+    padding: 8px;
+    cursor: pointer;
+    border-radius: 4px;
+    transition: all 0.2s;
+    flex-shrink: 0;
+}
+
+.mic-btn.active {
+    color: var(--status-listening);
+    background: rgba(0, 243, 255, 0.1);
+}
+
+.send-btn {
+    background: var(--bg-tool);
+    border: none;
+    color: var(--text-main);
+    padding: 8px;
+    border-radius: 6px;
+    cursor: pointer;
+    flex-shrink: 0;
+}
+
+.send-btn:hover:not(:disabled) {
+    background: var(--color-cyan);
+    color: #000;
+}
+
 .icon-btn,
 .mic-btn,
 .session-btn,
