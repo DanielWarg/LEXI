@@ -123,6 +123,142 @@ async def startup_event():
 
     print("[SERVER] Startup: Initializing Kasa Agent...")
     await kasa_agent.initialize()
+    
+    # Auto-start ADA on startup
+    print("[SERVER] Startup: Initializing ADA...")
+    await initialize_ada()
+
+async def initialize_ada(device_index=None, device_name=None, muted=False):
+    global audio_loop, loop_task
+    
+    if audio_loop:
+        if loop_task and not (loop_task.done() or loop_task.cancelled()):
+            print("ADA already running.")
+            if not muted:
+                audio_loop.set_paused(False)
+            return
+
+    # Callback to send audio data to frontend
+    def on_audio_data(data_bytes):
+        asyncio.create_task(sio.emit('audio_data', {'data': list(data_bytes)}))
+
+    # Callback to send CAL data to frontend
+    def on_cad_data(data):
+        pass
+
+    # Callback to send Browser data to frontend
+    def on_web_data(data):
+        print(f"Sending Browser data to frontend: {len(data.get('log', ''))} chars logs")
+        asyncio.create_task(sio.emit('browser_frame', data))
+        
+    # Callback to send Transcription data to frontend
+    def on_transcription(data):
+        asyncio.create_task(sio.emit('transcription', data))
+
+    # Callback to send Confirmation Request to frontend
+    def on_tool_confirmation(data):
+        print(f"Requesting confirmation for tool: {data.get('tool')}")
+        asyncio.create_task(sio.emit('tool_confirmation_request', data))
+
+    # Callback to send CAD status to frontend
+    def on_cad_status(status):
+        pass
+
+    # Callback to send CAD thoughts to frontend (streaming)
+    def on_cad_thought(thought_text):
+        pass
+
+    # Callback to send Project Update to frontend
+    def on_project_update(project_name):
+        print(f"Sending Project Update: {project_name}")
+        asyncio.create_task(sio.emit('project_update', {'project': project_name}))
+
+    # Callback to send Device Update to frontend
+    def on_device_update(devices):
+        print(f"Sending Kasa Device Update: {len(devices)} devices")
+        asyncio.create_task(sio.emit('kasa_devices', devices))
+
+    # Callback to send Error to frontend
+    def on_error(msg):
+        print(f"Sending Error to frontend: {msg}")
+        asyncio.create_task(sio.emit('error', {'msg': msg}))
+
+    # Initialize ADA
+    try:
+        print(f"Initializing AudioLoop with device_index={device_index}")
+        audio_loop = ada.AudioLoop(
+            video_mode="none", 
+            on_audio_data=on_audio_data,
+            on_cad_data=on_cad_data,
+            on_web_data=on_web_data,
+            on_transcription=on_transcription,
+            on_tool_confirmation=on_tool_confirmation,
+            on_cad_status=on_cad_status,
+            on_cad_thought=on_cad_thought,
+            on_project_update=on_project_update,
+            on_device_update=on_device_update,
+            on_error=on_error,
+
+            input_device_index=device_index,
+            input_device_name=device_name,
+            kasa_agent=kasa_agent
+        )
+        print("AudioLoop initialized successfully.")
+
+        # Apply current permissions
+        audio_loop.update_permissions(SETTINGS["tool_permissions"])
+        
+        # Start paused by default on startup if not overridden, or if muted requested
+        # Actually, for chat to work, we need the session.
+        # But for mic, we might want it paused. 
+        # ada.py 'paused' flag pauses audio reading.
+        # Let's default to paused=True on startup to avoid hot mic, unless user explicitly starts it.
+        # BUT, if we want "Hey Lexi" or similar later, we might need it on.
+        # For now, let's respect 'muted' arg.
+        
+        if muted:
+            print("Starting with Audio Paused")
+            audio_loop.set_paused(True)
+
+        print("Creating asyncio task for AudioLoop.run()")
+        loop_task = asyncio.create_task(audio_loop.run())
+        
+        def handle_loop_exit(task):
+            try:
+                task.result()
+            except asyncio.CancelledError:
+                print("Audio Loop Cancelled")
+            except Exception as e:
+                print(f"Audio Loop Crashed: {e}")
+        
+        loop_task.add_done_callback(handle_loop_exit)
+        
+        print("Emitting 'Lexi Started'")
+        # Broadcast status - might not reach anyone if no one connected yet, which is fine
+        asyncio.create_task(sio.emit('status', {'msg': 'Lexi Started'}))
+
+        # Load saved printers
+        saved_printers = SETTINGS.get("printers", [])
+        if saved_printers and audio_loop.printer_agent:
+            print(f"[SERVER] Loading {len(saved_printers)} saved printers...")
+            for p in saved_printers:
+                audio_loop.printer_agent.add_printer_manually(
+                    name=p.get("name", p["host"]),
+                    host=p["host"],
+                    port=p.get("port", 80),
+                    printer_type=p.get("type", "moonraker"),
+                    camera_url=p.get("camera_url")
+                )
+        
+        # Start Printer Monitor
+        asyncio.create_task(monitor_printers_loop())
+        
+    except Exception as e:
+        print(f"CRITICAL ERROR STARTING ADA: {e}")
+        import traceback
+        traceback.print_exc()
+        # await sio.emit('error', {'msg': f"Failed to start: {str(e)}"}) # No sid
+        audio_loop = None
 
 @app.get("/status")
 async def status():
@@ -164,9 +300,11 @@ async def connect(sid, environ):
         else:
             # Bypass Auth
             print("Face Auth Disabled. Auto-authenticating.")
-            # We don't change authenticator state to true to avoid confusion if re-enabled? 
-            # Or we should just tell client it's auth'd.
             await sio.emit('auth_status', {'authenticated': True})
+            
+    # Try to ensure ADA is running if it crashed or wasn't started
+    if not audio_loop:
+        asyncio.create_task(initialize_ada(muted=True))
 
 @sio.event
 async def disconnect(sid):
@@ -174,159 +312,27 @@ async def disconnect(sid):
 
 @sio.event
 async def start_audio(sid, data=None):
-    global audio_loop, loop_task
+    global audio_loop
     
     # Optional: Block if not authenticated
-    # Only block if auth is ENABLED and not authenticated
     if SETTINGS.get("face_auth_enabled", False):
         if authenticator and not authenticator.authenticated:
             print("Blocked start_audio: Not authenticated.")
             await sio.emit('error', {'msg': 'Authentication Required'})
             return
 
-    print("Starting Audio Loop...")
+    print("Starting Audio Loop Request...")
     
     device_index = None
     device_name = None
-    if data:
-        if 'device_index' in data:
-            device_index = data['device_index']
-        if 'device_name' in data:
-            device_name = data['device_name']
-            
-    print(f"Using input device: Name='{device_name}', Index={device_index}")
+    muted = False
     
-    if audio_loop:
-        if loop_task and (loop_task.done() or loop_task.cancelled()):
-             print("Audio loop task appeared finished/cancelled. Clearing and restarting...")
-             audio_loop = None
-             loop_task = None
-        else:
-             print("Audio loop already running. Re-connecting client to session.")
-             await sio.emit('status', {'msg': 'Lexi Already Running'})
-             return
-
-
-    # Callback to send audio data to frontend
-    def on_audio_data(data_bytes):
-        # We need to schedule this on the event loop
-        # This is high frequency, so we might want to downsample or batch if it's too much
-        asyncio.create_task(sio.emit('audio_data', {'data': list(data_bytes)}))
-
-    # Callback to send CAL data to frontend
-    def on_cad_data(data):
-        pass
-
-    # Callback to send Browser data to frontend
-    def on_web_data(data):
-        print(f"Sending Browser data to frontend: {len(data.get('log', ''))} chars logs")
-        asyncio.create_task(sio.emit('browser_frame', data))
-        
-    # Callback to send Transcription data to frontend
-    def on_transcription(data):
-        # data = {"sender": "User"|"ADA", "text": "..."}
-        asyncio.create_task(sio.emit('transcription', data))
-
-    # Callback to send Confirmation Request to frontend
-    def on_tool_confirmation(data):
-        # data = {"id": "uuid", "tool": "tool_name", "args": {...}}
-        print(f"Requesting confirmation for tool: {data.get('tool')}")
-        asyncio.create_task(sio.emit('tool_confirmation_request', data))
-
-    # Callback to send CAD status to frontend
-    def on_cad_status(status):
-        pass
-
-    # Callback to send CAD thoughts to frontend (streaming)
-    def on_cad_thought(thought_text):
-        pass
-
-    # Callback to send Project Update to frontend
-    def on_project_update(project_name):
-        print(f"Sending Project Update: {project_name}")
-        asyncio.create_task(sio.emit('project_update', {'project': project_name}))
-
-    # Callback to send Device Update to frontend
-    def on_device_update(devices):
-        # devices is a list of dicts
-        print(f"Sending Kasa Device Update: {len(devices)} devices")
-        asyncio.create_task(sio.emit('kasa_devices', devices))
-
-    # Callback to send Error to frontend
-    def on_error(msg):
-        print(f"Sending Error to frontend: {msg}")
-        asyncio.create_task(sio.emit('error', {'msg': msg}))
-
-    # Initialize ADA
-    try:
-        print(f"Initializing AudioLoop with device_index={device_index}")
-        audio_loop = ada.AudioLoop(
-            video_mode="none", 
-            on_audio_data=on_audio_data,
-            on_cad_data=on_cad_data,
-            on_web_data=on_web_data,
-            on_transcription=on_transcription,
-            on_tool_confirmation=on_tool_confirmation,
-            on_cad_status=on_cad_status,
-            on_cad_thought=on_cad_thought,
-            on_project_update=on_project_update,
-            on_device_update=on_device_update,
-            on_error=on_error,
-
-            input_device_index=device_index,
-            input_device_name=device_name,
-            kasa_agent=kasa_agent
-        )
-        print("AudioLoop initialized successfully.")
-
-        # Apply current permissions
-        audio_loop.update_permissions(SETTINGS["tool_permissions"])
-        
-        # Check initial mute state
-        if data and data.get('muted', False):
-            print("Starting with Audio Paused")
-            audio_loop.set_paused(True)
-
-        print("Creating asyncio task for AudioLoop.run()")
-        loop_task = asyncio.create_task(audio_loop.run())
-        
-        # Add a done callback to catch silent failures in the loop
-        def handle_loop_exit(task):
-            try:
-                task.result()
-            except asyncio.CancelledError:
-                print("Audio Loop Cancelled")
-            except Exception as e:
-                print(f"Audio Loop Crashed: {e}")
-                # You could emit 'error' here if you have context
-        
-        loop_task.add_done_callback(handle_loop_exit)
-        
-        print("Emitting 'Lexi Started'")
-        await sio.emit('status', {'msg': 'Lexi Started'})
-
-        # Load saved printers
-        saved_printers = SETTINGS.get("printers", [])
-        if saved_printers and audio_loop.printer_agent:
-            print(f"[SERVER] Loading {len(saved_printers)} saved printers...")
-            for p in saved_printers:
-                audio_loop.printer_agent.add_printer_manually(
-                    name=p.get("name", p["host"]),
-                    host=p["host"],
-                    port=p.get("port", 80),
-                    printer_type=p.get("type", "moonraker"),
-                    camera_url=p.get("camera_url")
-                )
-        
-        # Start Printer Monitor
-        asyncio.create_task(monitor_printers_loop())
-        
-    except Exception as e:
-        print(f"CRITICAL ERROR STARTING ADA: {e}")
-        import traceback
-        traceback.print_exc()
-        await sio.emit('error', {'msg': f"Failed to start: {str(e)}"})
-        audio_loop = None # Ensure we can try again
+    if data:
+        device_index = data.get('device_index')
+        device_name = data.get('device_name')
+        muted = data.get('muted', False)
+            
+    await initialize_ada(device_index=device_index, device_name=device_name, muted=muted)
 
 
 async def monitor_printers_loop():
@@ -429,6 +435,104 @@ async def shutdown(sid, data=None):
     
     # Force exit immediately - os._exit bypasses cleanup but ensures termination
     os._exit(0)
+
+
+@sio.event
+async def get_audio_devices(sid):
+    print("Received get_audio_devices request")
+    try:
+        input_devices = ada.get_input_devices() # List of (index, name)
+        output_devices = ada.get_output_devices() # List of (index, name)
+        
+        # Format for frontend
+        inputs = [{"index": i, "name": name} for i, name in input_devices]
+        outputs = [{"index": i, "name": name} for i, name in output_devices]
+        
+        # Default Logic for Microphone
+        if "input_device_index" not in SETTINGS or SETTINGS["input_device_index"] is None:
+            # Try to find a built-in microphone
+            default_index = 0
+            for i, name in input_devices:
+                lower_name = name.lower()
+                if "built-in" in lower_name or "internal" in lower_name or "macbook" in lower_name:
+                    default_index = i
+                    break # Take the first built-in found
+            
+            print(f"Auto-setting default microphone to index {default_index}")
+            SETTINGS["input_device_index"] = default_index
+            save_settings()
+
+        await sio.emit('audio_devices', {'inputs': inputs, 'outputs': outputs})
+        print(f"Sent {len(inputs)} inputs and {len(outputs)} outputs")
+    except Exception as e:
+        print(f"Error getting audio devices: {e}")
+        await sio.emit('error', {'msg': f"Failed to get audio devices: {str(e)}"})
+
+@sio.event
+async def get_video_devices(sid):
+    print("Received get_video_devices request")
+    try:
+        devices = ada.get_video_devices() # List of (index, name)
+        
+        formatted = []
+        internal_index = None # Start with None to detect if we found one
+        
+        for i, name in devices:
+             is_internal = "facetime" in name.lower() or "built-in" in name.lower() or "internal" in name.lower()
+             formatted.append({
+                 "index": i, 
+                 "name": name,
+                 "is_internal": is_internal
+             })
+             
+             # Capture the first internal camera found
+             if is_internal and internal_index is None:
+                 internal_index = i
+        
+        # Fallback to 0 if no internal camera found
+        if internal_index is None and devices:
+            internal_index = 0
+
+        # Ensure default is set to internal if not already set
+        if "video_device_index" not in SETTINGS or SETTINGS["video_device_index"] is None:
+             if internal_index is not None:
+                print(f"Auto-setting default camera to index {internal_index}")
+                SETTINGS["video_device_index"] = internal_index
+                save_settings()
+            
+        await sio.emit('video_devices', formatted)
+        print(f"Sent {len(formatted)} video devices")
+    except Exception as e:
+        print(f"Error getting video devices: {e}")
+        await sio.emit('error', {'msg': f"Failed to get video devices: {str(e)}"})
+
+
+@sio.event
+async def set_audio_device(sid, data):
+    # data: { "type": "input"|"output"|"video", "index": 1 }
+    dev_type = data.get('type')
+    index = data.get('index')
+    
+    print(f"Received set_audio_device request: {dev_type} -> {index}")
+    
+    # Update Settings
+    if dev_type == "input":
+        SETTINGS["input_device_index"] = index
+    elif dev_type == "output":
+         SETTINGS["output_device_index"] = index
+    elif dev_type == "video":
+         SETTINGS["video_device_index"] = index
+         
+    save_settings()
+    
+    # Restart ADA if running to apply changes
+    if audio_loop:
+        print("Restarting AudioLoop to apply device change...")
+        await initialize_ada(
+            device_index=SETTINGS.get("input_device_index"),
+            video_device_index=SETTINGS.get("video_device_index")
+        )
+        await sio.emit('status', {'msg': f"{dev_type.capitalize()} device changed to index {index}"})
 
 @sio.event
 async def user_input(sid, data):

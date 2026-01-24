@@ -15,6 +15,9 @@
 
     border: 2px dashed rgba(255, 255, 255, 0.05);
     border-radius: 20px;
+
+    /* Make room for floating dock bar */
+    padding-bottom: 80px;
 }
 
 /* Container directly for the Real Views */

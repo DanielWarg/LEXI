@@ -1,0 +1,157 @@
+.files-view {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    padding: 24px;
+    height: 100%;
+}
+
+.project-badge {
+    padding: 4px 12px;
+    background: rgba(0, 243, 255, 0.1);
+    border: 1px solid var(--color-cyan);
+    border-radius: 20px;
+    font-size: 0.8rem;
+    color: var(--color-cyan);
+    font-weight: 600;
+}
+
+.breadcrumb {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding: 8px 12px;
+    background: var(--bg-panel);
+    border-radius: 8px;
+    font-size: 0.85rem;
+}
+
+.breadcrumb button {
+    background: none;
+    border: none;
+    color: var(--text-muted);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding: 4px 8px;
+    border-radius: 4px;
+    transition: all 0.2s;
+}
+
+.breadcrumb button:hover {
+    background: var(--bg-tool);
+    color: var(--color-cyan);
+}
+
+.breadcrumb svg {
+    color: var(--text-muted);
+}
+
+.files-list {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    overflow-y: auto;
+}
+
+.file-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 16px;
+    background: var(--bg-panel);
+    border: 1px solid transparent;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.file-item:hover {
+    border-color: var(--border-subtle);
+    background: var(--bg-tool);
+}
+
+.file-item.directory svg {
+    color: var(--color-cyan);
+}
+
+.file-item.file svg {
+    color: var(--text-muted);
+}
+
+.file-name {
+    flex: 1;
+    color: var(--text-main);
+    font-size: 0.9rem;
+}
+
+.file-size {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+}
+
+.files-footer {
+    padding: 12px 16px;
+    background: var(--bg-panel);
+    border-radius: 8px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.footer-info {
+    font-size: 0.85rem;
+    color: var(--text-muted);
+}
+
+.footer-info strong {
+    color: var(--color-cyan);
+}
+
+/* Reuse shared styles */
+.files-view .view-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.files-view .header-title {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    color: var(--text-main);
+}
+
+.files-view .header-title h2 {
+    margin: 0;
+    font-size: 1.25rem;
+    font-weight: 600;
+}
+
+.files-view .empty-state {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    color: var(--text-muted);
+    padding: 40px;
+}
+
+.files-view .empty-icon {
+    opacity: 0.3;
+}
+
+.files-view .empty-state p {
+    margin: 0;
+    font-size: 1rem;
+}
+
+.files-view .empty-state span {
+    font-size: 0.85rem;
+    opacity: 0.7;
+    text-align: center;
+}

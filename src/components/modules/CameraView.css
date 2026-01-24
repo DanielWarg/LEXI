@@ -1,0 +1,145 @@
+.camera-view {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    padding: 24px;
+    height: 100%;
+}
+
+.camera-container {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--bg-panel);
+    border: 1px solid var(--border-subtle);
+    border-radius: 12px;
+    overflow: hidden;
+    min-height: 300px;
+}
+
+.camera-feed {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    background: #000;
+}
+
+.camera-placeholder {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 16px;
+    color: var(--text-muted);
+    padding: 40px;
+}
+
+.placeholder-icon {
+    opacity: 0.3;
+}
+
+.camera-placeholder p {
+    margin: 0;
+    font-size: 1rem;
+}
+
+.camera-placeholder span {
+    font-size: 0.85rem;
+    opacity: 0.7;
+    text-align: center;
+}
+
+.camera-status {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    justify-content: center;
+    font-size: 0.85rem;
+    color: var(--text-muted);
+}
+
+.status-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--text-muted);
+}
+
+.status-dot.live {
+    background: #ff4444;
+    animation: pulse-dot 1.5s infinite;
+}
+
+@keyframes pulse-dot {
+
+    0%,
+    100% {
+        opacity: 1;
+    }
+
+    50% {
+        opacity: 0.5;
+    }
+}
+
+/* Reuse shared styles */
+.camera-view .view-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.camera-view .header-title {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    color: var(--text-main);
+}
+
+.camera-view .header-title h2 {
+    margin: 0;
+    font-size: 1.25rem;
+    font-weight: 600;
+}
+
+.camera-view .header-actions {
+    display: flex;
+    gap: 8px;
+}
+
+.camera-view .action-btn {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 14px;
+    background: var(--bg-tool);
+    border: 1px solid var(--border-subtle);
+    border-radius: 6px;
+    color: var(--text-main);
+    font-size: 0.85rem;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.camera-view .action-btn:hover:not(:disabled) {
+    background: var(--bg-panel);
+    border-color: var(--color-cyan);
+}
+
+.camera-view .action-btn.primary {
+    background: var(--color-cyan);
+    border-color: var(--color-cyan);
+    color: #000;
+}
+
+.camera-view .action-btn.stop {
+    background: rgba(255, 68, 68, 0.1);
+    border-color: #ff4444;
+    color: #ff4444;
+}
+
+.camera-view .action-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}

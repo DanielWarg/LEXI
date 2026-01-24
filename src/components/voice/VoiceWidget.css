@@ -115,12 +115,14 @@
 
 .input-area {
     display: flex;
-    gap: 8px;
+    gap: 4px;
     align-items: center;
     background: var(--bg-app);
     border: 1px solid var(--border-subtle);
     border-radius: 8px;
     padding: 4px;
+    flex-wrap: nowrap;
+    min-width: 0;
 }
 
 .input-area input {
@@ -152,6 +154,7 @@
     cursor: pointer;
     border-radius: 4px;
     transition: all 0.2s;
+    flex-shrink: 0;
 }
 
 .mic-btn.active {
@@ -166,9 +169,45 @@
     padding: 8px;
     border-radius: 6px;
     cursor: pointer;
+    flex-shrink: 0;
 }
 
-.send-btn:hover {
+.send-btn:hover:not(:disabled) {
     background: var(--color-cyan);
     color: #000;
+}
+
+.send-btn:disabled,
+.mic-btn:disabled,
+.session-btn:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+}
+
+.session-btn {
+    background: transparent;
+    border: none;
+    color: var(--text-muted);
+    padding: 8px;
+    cursor: pointer;
+    border-radius: 4px;
+    transition: all 0.2s;
+    flex-shrink: 0;
+}
+
+.session-btn.start:hover:not(:disabled) {
+    color: var(--color-cyan);
+    background: rgba(0, 243, 255, 0.1);
+}
+
+.session-btn.stop {
+    color: #ff4444;
+}
+
+.session-btn.stop:hover {
+    background: rgba(255, 68, 68, 0.1);
+}
+
+.input-area input:disabled {
+    opacity: 0.5;
 }

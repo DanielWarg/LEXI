@@ -12,5 +12,6 @@
     },
     "printers": [],
     "kasa_devices": [],
-    "camera_flipped": false
+    "camera_flipped": false,
+    "video_device_index": 0
 }

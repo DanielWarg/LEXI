@@ -23,17 +23,17 @@ export const SettingsView: React.FC = () => {
     const [permissions, setPermissions] = useState<Record<string, boolean>>({});
     const [faceAuthEnabled, setFaceAuthEnabled] = useState(false);
 
-    // Mock devices for UI (since backend sends them separately via props in Ref-Lexi, 
-    // but here we might need to fetch them or just stub them if socket doesn't send list)
-    // In Ref-Lexi, App.jsx passes them. We'll simulate for now or fetch if backend has an event.
-    const micDevices = [{ deviceId: 'default', label: 'Default Microphone' }];
-    const speakerDevices = [{ deviceId: 'default', label: 'Default Speaker' }];
-    const webcamDevices = [{ deviceId: 'default', label: 'FaceTime HD Camera' }];
+    const [inputDevices, setInputDevices] = useState<{ index: number, name: string }[]>([]);
+    const [outputDevices, setOutputDevices] = useState<{ index: number, name: string }[]>([]);
+
+    const [videoDevices, setVideoDevices] = useState<{ index: number, name: string, is_internal: boolean }[]>([]);
 
     useEffect(() => {
         if (!socket) return;
 
         socket.emit('get_settings');
+        socket.emit('get_audio_devices');
+        socket.emit('get_video_devices');
 
         const handleSettings = (settings: any) => {
             if (settings) {
@@ -44,9 +44,27 @@ export const SettingsView: React.FC = () => {
             }
         };
 
+        const handleAudioDevices = (data: { inputs: any[], outputs: any[] }) => {
+            if (data) {
+                setInputDevices(data.inputs || []);
+                setOutputDevices(data.outputs || []);
+            }
+        };
+
+        const handleVideoDevices = (data: any[]) => {
+            if (data) {
+                setVideoDevices(data);
+            }
+        }
+
         socket.on('settings', handleSettings);
+        socket.on('audio_devices', handleAudioDevices);
+        socket.on('video_devices', handleVideoDevices);
+
         return () => {
             socket.off('settings', handleSettings);
+            socket.off('audio_devices', handleAudioDevices);
+            socket.off('video_devices', handleVideoDevices);
         };
     }, [socket]);
 
@@ -60,6 +78,24 @@ export const SettingsView: React.FC = () => {
         const nextVal = !faceAuthEnabled;
         setFaceAuthEnabled(nextVal);
         socket?.emit('update_settings', { face_auth_enabled: nextVal });
+    };
+
+    const handleInputDeviceChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+        const index = parseInt(e.target.value);
+        console.log("Setting input device to:", index);
+        socket?.emit('set_audio_device', { type: 'input', index: index });
+    };
+
+    const handleOutputDeviceChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+        const index = parseInt(e.target.value);
+        console.log("Setting output device to:", index);
+        socket?.emit('set_audio_device', { type: 'output', index: index });
+    };
+
+    const handleVideoDeviceChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+        const index = parseInt(e.target.value);
+        console.log("Setting video device to:", index);
+        socket?.emit('set_audio_device', { type: 'video', index: index });
     };
 
     return (
@@ -100,21 +136,28 @@ export const SettingsView: React.FC = () => {
             <div className="settings-column">
                 <h3 className="settings-header"><Mic size={16} /> Hardware</h3>
                 <div className="setting-group">
-                    <label>Microphone</label>
-                    <select className="dark-select">
-                        {micDevices.map(d => <option key={d.deviceId} value={d.deviceId}>{d.label}</option>)}
+                    <label>Microphone (Backend)</label>
+                    <select className="dark-select" onChange={handleInputDeviceChange}>
+                        {inputDevices.length === 0 && <option>Loading...</option>}
+                        {inputDevices.map(d => <option key={d.index} value={d.index}>{d.name}</option>)}
                     </select>
                 </div>
                 <div className="setting-group">
-                    <label>Speaker</label>
-                    <select className="dark-select">
-                        {speakerDevices.map(d => <option key={d.deviceId} value={d.deviceId}>{d.label}</option>)}
+                    <label>Speaker (Backend)</label>
+                    <select className="dark-select" onChange={handleOutputDeviceChange}>
+                        {outputDevices.length === 0 && <option>Loading...</option>}
+                        {outputDevices.map(d => <option key={d.index} value={d.index}>{d.name}</option>)}
                     </select>
                 </div>
                 <div className="setting-group">
-                    <label>Camera Camera</label>
-                    <select className="dark-select">
-                        {webcamDevices.map(d => <option key={d.deviceId} value={d.deviceId}>{d.label}</option>)}
+                    <label>Camera (Backend)</label>
+                    <select className="dark-select" onChange={handleVideoDeviceChange}>
+                        {videoDevices.length === 0 && <option>Loading...</option>}
+                        {videoDevices.map(d => (
+                            <option key={d.index} value={d.index}>
+                                {d.name} {d.is_internal ? '(Default/Internal)' : ''}
+                            </option>
+                        ))}
                     </select>
                 </div>
             </div>

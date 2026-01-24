@@ -1,0 +1,214 @@
+.kasa-view {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    padding: 24px;
+    height: 100%;
+}
+
+.device-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+    gap: 16px;
+    flex: 1;
+    align-content: start;
+}
+
+.device-card {
+    padding: 16px;
+    background: var(--bg-panel);
+    border: 1px solid var(--border-subtle);
+    border-radius: 12px;
+    transition: all 0.3s;
+}
+
+.device-card.on {
+    border-color: var(--color-cyan);
+    box-shadow: 0 0 20px rgba(0, 243, 255, 0.1);
+}
+
+.device-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
+}
+
+.device-icon {
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--bg-app);
+    border-radius: 10px;
+    color: var(--text-muted);
+    transition: all 0.3s;
+}
+
+.device-icon.active {
+    color: var(--color-cyan);
+    background: rgba(0, 243, 255, 0.1);
+}
+
+.power-toggle {
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--bg-app);
+    border: 1px solid var(--border-subtle);
+    border-radius: 8px;
+    color: var(--text-muted);
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.power-toggle:hover {
+    border-color: var(--color-cyan);
+    color: var(--color-cyan);
+}
+
+.power-toggle.on {
+    background: var(--color-cyan);
+    border-color: var(--color-cyan);
+    color: #000;
+}
+
+.device-info {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.device-name {
+    font-weight: 600;
+    color: var(--text-main);
+    font-size: 0.95rem;
+}
+
+.device-model {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.brightness-control {
+    margin-top: 12px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.brightness-slider {
+    flex: 1;
+    height: 4px;
+    -webkit-appearance: none;
+    appearance: none;
+    background: var(--bg-app);
+    border-radius: 2px;
+    outline: none;
+}
+
+.brightness-slider::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 14px;
+    height: 14px;
+    background: var(--color-cyan);
+    border-radius: 50%;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.brightness-slider::-webkit-slider-thumb:hover {
+    transform: scale(1.2);
+}
+
+.brightness-value {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    min-width: 35px;
+    text-align: right;
+}
+
+/* Reuse shared styles */
+.kasa-view .view-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.kasa-view .header-title {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    color: var(--text-main);
+}
+
+.kasa-view .header-title h2 {
+    margin: 0;
+    font-size: 1.25rem;
+    font-weight: 600;
+}
+
+.kasa-view .header-actions {
+    display: flex;
+    gap: 8px;
+}
+
+.kasa-view .action-btn {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 14px;
+    background: var(--bg-tool);
+    border: 1px solid var(--border-subtle);
+    border-radius: 6px;
+    color: var(--text-main);
+    font-size: 0.85rem;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.kasa-view .action-btn:hover:not(:disabled) {
+    background: var(--bg-panel);
+    border-color: var(--color-cyan);
+}
+
+.kasa-view .action-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.kasa-view .empty-state {
+    grid-column: 1 / -1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    padding: 60px 20px;
+    color: var(--text-muted);
+}
+
+.kasa-view .empty-icon {
+    opacity: 0.3;
+}
+
+.kasa-view .empty-state p {
+    margin: 0;
+    font-size: 1rem;
+}
+
+.kasa-view .empty-state span {
+    font-size: 0.85rem;
+    opacity: 0.7;
+    text-align: center;
+}
+
+.kasa-view .spin {
+    animation: spin 1s linear infinite;
+}

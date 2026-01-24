@@ -1,5 +1,5 @@
 import React from 'react';
-import { Globe, Printer, Box, FolderOpen, Home, Smartphone, Settings } from 'lucide-react';
+import { Globe, Printer, Box, FolderOpen, Home, Camera, Settings } from 'lucide-react';
 import './DockBar.css';
 
 interface DockBarProps {
@@ -57,13 +57,13 @@ export const DockBar: React.FC<DockBarProps> = ({ activeTool, onSelectTool }) =>
 
             <div className="dock-divider"></div>
 
-            {/* Mobile Connect */}
+            {/* Camera */}
             <button
                 className={`dock-item ${activeTool === 'mobile' ? 'active' : ''}`}
                 onClick={() => onSelectTool('mobile')}
-                title="Mobile Connect"
+                title="Camera"
             >
-                <Smartphone size={20} />
+                <Camera size={20} />
             </button>
 
             {/* Settings */}

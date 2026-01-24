@@ -1,6 +1,11 @@
 import React from 'react';
 import { WebAgentView } from '../modules/WebAgentView';
 import { SettingsView } from '../modules/SettingsView';
+import { PrinterView } from '../modules/PrinterView';
+import { KasaView } from '../modules/KasaView';
+import { CadView } from '../modules/CadView';
+import { CameraView } from '../modules/CameraView';
+import { FilesView } from '../modules/FilesView';
 import './CentralCanvas.css';
 
 interface CentralCanvasProps {
@@ -23,28 +28,64 @@ export const CentralCanvas: React.FC<CentralCanvasProps> = ({ activeTool = 'home
                 </div>
             )}
 
-            {/* Real Tool Views */}
+            {/* Web Agent */}
             {activeTool === 'web' && (
                 <div className="active-tool-container">
                     <WebAgentView />
                 </div>
             )}
 
+            {/* Settings */}
             {activeTool === 'settings' && (
                 <div className="active-tool-container">
                     <SettingsView />
                 </div>
             )}
 
-            {/* Placeholders for others until ported */}
-            {!['home', 'web', 'settings'].includes(activeTool) && (
+            {/* 3D Printer */}
+            {activeTool === 'printer' && (
+                <div className="active-tool-container">
+                    <PrinterView />
+                </div>
+            )}
+
+            {/* Smart Home / Kasa */}
+            {activeTool === 'home_control' && (
+                <div className="active-tool-container">
+                    <KasaView />
+                </div>
+            )}
+
+            {/* CAD / 3D Design */}
+            {activeTool === 'cad' && (
+                <div className="active-tool-container">
+                    <CadView />
+                </div>
+            )}
+
+            {/* Camera */}
+            {activeTool === 'mobile' && (
+                <div className="active-tool-container">
+                    <CameraView />
+                </div>
+            )}
+
+            {/* Project Files */}
+            {activeTool === 'files' && (
+                <div className="active-tool-container">
+                    <FilesView />
+                </div>
+            )}
+
+            {/* Any remaining placeholders */}
+            {!['home', 'web', 'settings', 'printer', 'home_control', 'cad', 'mobile', 'files'].includes(activeTool) && (
                 <div className="active-tool-view">
                     <div className="tool-view-header">
                         <h2>{activeTool.toUpperCase().replace('_', ' ')}</h2>
-                        <span className="live-indicator">● LIVE VIEW (Placeholder)</span>
+                        <span className="live-indicator">● COMING SOON</span>
                     </div>
                     <div className="tool-placeholder-content">
-                        <p>Real-time tool interface for {activeTool} coming soon.</p>
+                        <p>This module is under development.</p>
                     </div>
                 </div>
             )}

@@ -272,7 +272,7 @@ from kasa_agent import KasaAgent
 from printer_agent import PrinterAgent
 
 class AudioLoop:
-    def __init__(self, video_mode=DEFAULT_MODE, on_audio_data=None, on_video_frame=None, on_cad_data=None, on_web_data=None, on_transcription=None, on_tool_confirmation=None, on_cad_status=None, on_cad_thought=None, on_project_update=None, on_device_update=None, on_error=None, input_device_index=None, input_device_name=None, output_device_index=None, kasa_agent=None):
+    def __init__(self, video_mode=DEFAULT_MODE, on_audio_data=None, on_video_frame=None, on_cad_data=None, on_web_data=None, on_transcription=None, on_tool_confirmation=None, on_cad_status=None, on_cad_thought=None, on_project_update=None, on_device_update=None, on_error=None, input_device_index=None, input_device_name=None, output_device_index=None, video_device_index=0, kasa_agent=None):
         self.video_mode = video_mode
         self.on_audio_data = on_audio_data
         self.on_video_frame = on_video_frame
@@ -288,6 +288,7 @@ class AudioLoop:
         self.input_device_index = input_device_index
         self.input_device_name = input_device_name
         self.output_device_index = output_device_index
+        self.video_device_index = video_device_index
 
         self.audio_in_queue = None
         self.out_queue = None
@@ -1226,7 +1227,10 @@ class AudioLoop:
                 print("[PERF] Speaking done - mic re-enabled")
 
     async def get_frames(self):
-        cap = await asyncio.to_thread(cv2.VideoCapture, 0, cv2.CAP_AVFOUNDATION)
+        # Use configurable video index, defaulting to 0
+        idx = self.video_device_index if self.video_device_index is not None else 0
+        print(f"[ADA] Starting VideoCapture with index {idx}")
+        cap = await asyncio.to_thread(cv2.VideoCapture, idx, cv2.CAP_AVFOUNDATION)
         while True:
             if self.paused:
                 await asyncio.sleep(0.1)
@@ -1372,7 +1376,56 @@ def get_output_devices():
         if (p.get_device_info_by_host_api_device_index(0, i).get('maxOutputChannels')) > 0:
             devices.append((i, p.get_device_info_by_host_api_device_index(0, i).get('name')))
     p.terminate()
+    p.terminate()
     return devices
+
+def get_video_devices():
+    """
+    Returns a list of available video devices (index, name).
+    On macOS, uses system_profiler to get names.
+    On other OS, might return generic names.
+    """
+    devices = []
+    
+    # Platform specific implementation
+    if sys.platform == "darwin":
+        try:
+            import subprocess
+            # Get camera info from system_profiler
+            cmd = ["system_profiler", "SPCameraDataType", "-json"]
+            result = subprocess.run(cmd, capture_output=True, text=True)
+            if result.returncode == 0:
+                data = json.loads(result.stdout)
+                # Parse JSON output
+                # Structure: SPCameraDataType -> [{_name: "FaceTime HD Camera", ...}, ...]
+                camera_data = data.get('SPCameraDataType', [])
+                for i, cam in enumerate(camera_data):
+                    name = cam.get('_name', f"Camera {i}")
+                    # Note: index mapping might not perfectly match system_profiler order 
+                    # but usually it's close enough for main cameras.
+                    # FaceTime camera is usually 0 if built-in.
+                    devices.append((i, name))
+        except Exception as e:
+            print(f"[ADA] Error listing cameras via system_profiler: {e}")
+            pass
+
+    # Fallback / Verification using OpenCV
+    # We want to check if the indices actually work or if there are more
+    if not devices:
+        # Simple probe
+        for i in range(5):
+             cap = cv2.VideoCapture(i)
+             if cap.isOpened():
+                 ret, _ = cap.read()
+                 if ret:
+                     devices.append((i, f"Camera {i}"))
+                 cap.release()
+             else:
+                 # Gaps are rare but possible, usually stop at first failure
+                 break
+    
+    return devices
+
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()

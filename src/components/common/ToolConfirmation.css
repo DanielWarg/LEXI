@@ -1,0 +1,167 @@
+.tool-confirmation-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.7);
+    backdrop-filter: blur(4px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+    animation: fadeIn 0.2s ease-out;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+    }
+
+    to {
+        opacity: 1;
+    }
+}
+
+.tool-confirmation-modal {
+    background: var(--bg-panel);
+    border: 1px solid var(--color-cyan);
+    border-radius: 12px;
+    padding: 24px;
+    min-width: 380px;
+    max-width: 500px;
+    box-shadow: 0 0 40px rgba(0, 243, 255, 0.2);
+    animation: slideUp 0.2s ease-out;
+}
+
+@keyframes slideUp {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.modal-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 16px;
+}
+
+.modal-header h3 {
+    margin: 0;
+    font-size: 1.1rem;
+    color: var(--text-main);
+}
+
+.shield-icon {
+    color: var(--color-cyan);
+}
+
+.modal-body {
+    margin-bottom: 20px;
+}
+
+.tool-name {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 12px;
+    background: var(--bg-app);
+    border-radius: 8px;
+    margin-bottom: 12px;
+}
+
+.tool-name svg {
+    color: #fbbf24;
+}
+
+.tool-name span {
+    font-family: monospace;
+    font-size: 0.95rem;
+    color: var(--color-cyan);
+    font-weight: 600;
+}
+
+.tool-args {
+    background: var(--bg-app);
+    border-radius: 8px;
+    padding: 12px;
+    margin-bottom: 12px;
+}
+
+.args-label {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    display: block;
+    margin-bottom: 8px;
+}
+
+.tool-args pre {
+    margin: 0;
+    font-size: 0.8rem;
+    color: var(--text-main);
+    max-height: 150px;
+    overflow-y: auto;
+    white-space: pre-wrap;
+    word-break: break-all;
+}
+
+.confirmation-text {
+    margin: 0;
+    font-size: 0.9rem;
+    color: var(--text-muted);
+}
+
+.modal-actions {
+    display: flex;
+    gap: 12px;
+}
+
+.modal-actions .action-btn {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 12px 16px;
+    border: none;
+    border-radius: 8px;
+    font-size: 0.9rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.action-btn.deny {
+    background: rgba(255, 68, 68, 0.1);
+    color: #ff4444;
+    border: 1px solid #ff4444;
+}
+
+.action-btn.deny:hover {
+    background: rgba(255, 68, 68, 0.2);
+}
+
+.action-btn.approve {
+    background: var(--color-cyan);
+    color: #000;
+}
+
+.action-btn.approve:hover {
+    background: var(--color-cyan-glow);
+}
+
+.pending-count {
+    margin-top: 12px;
+    text-align: center;
+    font-size: 0.8rem;
+    color: var(--text-muted);
+}
