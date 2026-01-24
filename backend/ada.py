@@ -486,7 +486,8 @@ class AudioLoop:
         VAD_THRESHOLD = 800 # Adj based on mic sensitivity (800 is conservative for 16-bit)
         SILENCE_DURATION = 0.5 # Seconds of silence to consider "done speaking"
         
-        # Init flush flag
+        # Init flush counter
+        self._flush_count = 0
         self._clear_buffer_on_next_loop = False
 
         while True:
@@ -496,17 +497,18 @@ class AudioLoop:
             
             # Flush buffer if requested (e.g. after pause)
             if self._clear_buffer_on_next_loop:
-                print("[ADA] Flushing audio buffer on resume...")
-                try:
-                    # Stop/Start stream clears the OS buffer effectively
-                    self.audio_stream.stop_stream()
-                    self.audio_stream.start_stream()
-                except Exception as e:
-                    print(f"[ADA] [WARN] Failed to flush buffer: {e}")
+                print("[ADA] Soft flushing audio buffer on resume (discarding ~0.6s)...")
+                # Discard next 10 chunks (~0.64s at 16k sample rate / 1024 chunk)
+                self._flush_count = 10 
                 self._clear_buffer_on_next_loop = False
 
             try:
                 data = await asyncio.to_thread(self.audio_stream.read, CHUNK_SIZE, **kwargs)
+
+                # Soft Flush: Discard chunks if counter is set
+                if self._flush_count > 0:
+                    self._flush_count -= 1
+                    continue
                 
                 # ECHO CANCELLATION: Drop mic input while Lexi is speaking
                 if self.is_speaking:
