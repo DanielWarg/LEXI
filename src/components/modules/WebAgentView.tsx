@@ -10,8 +10,9 @@ export const WebAgentView: React.FC = () => {
     const [logs, setLogs] = useState<string[]>([]);
     const logsEndRef = useRef<HTMLDivElement>(null);
     const viewportRef = useRef<HTMLDivElement>(null);
+    const lastSentSize = useRef({ width: 0, height: 0 });
 
-    // Send canvas size to backend
+    // Send canvas size to backend - only if significantly different and valid
     const sendCanvasSize = useCallback(() => {
         if (!socket || !viewportRef.current) return;
 
@@ -19,26 +20,44 @@ export const WebAgentView: React.FC = () => {
         const width = Math.floor(rect.width);
         const height = Math.floor(rect.height);
 
-        if (width > 0 && height > 0) {
-            console.log(`[WebAgentView] Sending canvas resize: ${width}x${height}`);
-            socket.emit('ui_canvas_resize', { width, height });
+        // Only send if dimensions are reasonable (min 400x300) and changed significantly
+        const minWidth = 400;
+        const minHeight = 300;
+        const threshold = 50; // Minimum change to trigger update
+
+        if (width >= minWidth && height >= minHeight) {
+            const widthDiff = Math.abs(width - lastSentSize.current.width);
+            const heightDiff = Math.abs(height - lastSentSize.current.height);
+
+            if (widthDiff > threshold || heightDiff > threshold || lastSentSize.current.width === 0) {
+                console.log(`[WebAgentView] Sending canvas resize: ${width}x${height}`);
+                socket.emit('ui_canvas_resize', { width, height });
+                lastSentSize.current = { width, height };
+            }
         }
     }, [socket]);
 
-    // Resize observer for viewport container
+    // Resize observer with debounce
     useEffect(() => {
         if (!viewportRef.current) return;
 
-        // Send initial size
-        sendCanvasSize();
+        let timeoutId: NodeJS.Timeout;
+
+        // Delayed initial size (wait for layout)
+        timeoutId = setTimeout(() => {
+            sendCanvasSize();
+        }, 500);
 
         const resizeObserver = new ResizeObserver(() => {
-            sendCanvasSize();
+            // Debounce resize events
+            clearTimeout(timeoutId);
+            timeoutId = setTimeout(sendCanvasSize, 200);
         });
 
         resizeObserver.observe(viewportRef.current);
 
         return () => {
+            clearTimeout(timeoutId);
             resizeObserver.disconnect();
         };
     }, [sendCanvasSize]);
