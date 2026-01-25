@@ -346,6 +346,11 @@ async def connect(sid, environ):
     print(f"Client connected: {sid}")
     await sio.emit('status', {'msg': 'Connected to Lexi Backend'}, room=sid)
 
+    # If Lexi is already running, notify the new client
+    global audio_loop
+    if audio_loop is not None:
+        await sio.emit('status', {'msg': 'Lexi Started'}, room=sid)
+
     global authenticator
     
     # Callback for Auth Status
