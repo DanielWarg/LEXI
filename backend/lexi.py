@@ -1249,15 +1249,30 @@ class AudioLoop:
         except OSError as e:
             if e.errno == -9998: # Invalid number of channels
                 print(f"[LEXI] [WARN] Mono output not supported by device. Falling back to Stereo channel count.")
-                stream = await asyncio.to_thread(
-                    pya.open,
-                    format=FORMAT,
-                    channels=2, # Force Stereo
-                    rate=RECEIVE_SAMPLE_RATE,
-                    output=True,
-                    output_device_index=self.output_device_index,
-                )
-                stereo_mode = True
+                try:
+                    stream = await asyncio.to_thread(
+                        pya.open,
+                        format=FORMAT,
+                        channels=2, # Force Stereo
+                        rate=RECEIVE_SAMPLE_RATE,
+                        output=True,
+                        output_device_index=self.output_device_index,
+                    )
+                    stereo_mode = True
+                    print(f"[LEXI] [INFO] Switched to Stereo mode for output device {self.output_device_index}")
+                except OSError as e2:
+                    print(f"[LEXI] [WARN] Specific device {self.output_device_index} rejected Stereo. Attempting System Default Device...")
+                    # EMERGENY FALLBACK: System Default
+                    stream = await asyncio.to_thread(
+                        pya.open,
+                        format=FORMAT,
+                        channels=2, # Stereo on Default
+                        rate=RECEIVE_SAMPLE_RATE,
+                        output=True,
+                        output_device_index=None,
+                    )
+                    stereo_mode = True
+                    print(f"[LEXI] [INFO] Fallback to System Default (Stereo) successful.")
             else:
                 raise e
         while True:
