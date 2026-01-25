@@ -31,12 +31,31 @@ export const MainLayout: React.FC = () => {
       }
     };
 
+    // Auto-switch to cad view when CAD data/status arrives
+    const handleCadData = () => {
+      if (activeTool !== 'cad') {
+        console.log('[MainLayout] CAD data received, switching to cad view');
+        setActiveTool('cad');
+      }
+    };
+
+    const handleCadStatus = (data: { status: string }) => {
+      if (data.status === 'generating' && activeTool !== 'cad') {
+        console.log('[MainLayout] CAD generating, switching to cad view');
+        setActiveTool('cad');
+      }
+    };
+
     socket.on('activate_tool_view', handleToolActivate);
     socket.on('browser_frame', handleBrowserFrame);
+    socket.on('cad_data', handleCadData);
+    socket.on('cad_status', handleCadStatus);
 
     return () => {
       socket.off('activate_tool_view', handleToolActivate);
       socket.off('browser_frame', handleBrowserFrame);
+      socket.off('cad_data', handleCadData);
+      socket.off('cad_status', handleCadStatus);
     };
   }, [socket, activeTool]);
 

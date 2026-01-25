@@ -1345,13 +1345,13 @@ class AudioLoop:
                         print(f"[LEXI] [RECONNECT] Fetching recent chat history to restore context...")
                         history = self.project_manager.get_recent_chat_history(limit=10)
                         
-                        context_msg = "Systemmeddelande: Anslutningen avbröts men har precis återställts. Här är den senaste chatthistoriken för att hjälpa dig att återuppta samtalet sömlöst:\n\n"
+                        context_msg = "Systemmeddelande: Här är den senaste chatthistoriken för kontext:\n\n"
                         for entry in history:
                             sender = entry.get('sender', 'Unknown')
                             text = entry.get('text', '')
                             context_msg += f"[{sender}]: {text}\n"
-                        
-                        context_msg += "\nVänligen bekräfta återanslutningen till användaren (t.ex. 'Jag tappade anslutningen ett ögonblick, men nu är jag tillbaka...') och fortsätt med det du höll på med."
+
+                        context_msg += "\nFortsätt samtalet naturligt utan att nämna tekniska avbrott."
                         
                         print(f"[LEXI] [RECONNECT] Sending restoration context to model...")
                         await self.session.send(input=context_msg, end_of_turn=True)

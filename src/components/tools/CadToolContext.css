@@ -1,0 +1,190 @@
+.cad-tool-context {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    height: 100%;
+}
+
+.context-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid rgba(6, 182, 212, 0.2);
+}
+
+.context-header .context-icon {
+    color: #06b6d4;
+}
+
+.context-header span {
+    font-size: 0.7rem;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    color: #06b6d4;
+}
+
+.context-actions {
+    display: flex;
+    gap: 8px;
+}
+
+.ctx-btn {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    padding: 8px 12px;
+    background: rgba(6, 182, 212, 0.1);
+    border: 1px solid rgba(6, 182, 212, 0.3);
+    border-radius: 6px;
+    color: #06b6d4;
+    font-size: 0.75rem;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.ctx-btn:hover:not(:disabled) {
+    background: rgba(6, 182, 212, 0.2);
+    border-color: rgba(6, 182, 212, 0.5);
+}
+
+.ctx-btn.primary {
+    background: rgba(6, 182, 212, 0.2);
+    border-color: #06b6d4;
+}
+
+.ctx-btn.primary:hover:not(:disabled) {
+    background: rgba(6, 182, 212, 0.3);
+}
+
+.ctx-btn:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+}
+
+.context-input {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.context-input textarea {
+    width: 100%;
+    min-height: 60px;
+    padding: 10px;
+    background: rgba(0, 0, 0, 0.3);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 6px;
+    color: #fff;
+    font-size: 0.8rem;
+    font-family: inherit;
+    resize: none;
+    outline: none;
+}
+
+.context-input textarea:focus {
+    border-color: rgba(6, 182, 212, 0.5);
+}
+
+.context-input textarea::placeholder {
+    color: rgba(255, 255, 255, 0.3);
+}
+
+.context-input textarea:disabled {
+    opacity: 0.5;
+}
+
+.input-buttons {
+    display: flex;
+    gap: 8px;
+}
+
+.input-buttons .ctx-btn {
+    flex: 1;
+}
+
+.context-thoughts {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    min-height: 0;
+    padding: 10px;
+    background: rgba(34, 197, 94, 0.05);
+    border: 1px solid rgba(34, 197, 94, 0.2);
+    border-radius: 6px;
+}
+
+.thoughts-header {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.7rem;
+    color: #22c55e;
+}
+
+.thinking-dot {
+    width: 6px;
+    height: 6px;
+    background: #22c55e;
+    border-radius: 50%;
+    animation: pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.3; }
+}
+
+.retry-info {
+    margin-left: auto;
+    padding: 2px 6px;
+    background: rgba(6, 182, 212, 0.2);
+    border-radius: 3px;
+    font-size: 0.6rem;
+    color: #06b6d4;
+}
+
+.retry-info.error {
+    background: rgba(234, 179, 8, 0.2);
+    color: #eab308;
+}
+
+.error-msg {
+    padding: 6px 8px;
+    background: rgba(239, 68, 68, 0.1);
+    border-radius: 4px;
+    font-size: 0.7rem;
+    color: #f87171;
+}
+
+.thoughts-text {
+    flex: 1;
+    overflow-y: auto;
+    font-size: 0.7rem;
+    font-family: monospace;
+    line-height: 1.5;
+    color: rgba(34, 197, 94, 0.8);
+    white-space: pre-wrap;
+}
+
+.thoughts-text::-webkit-scrollbar {
+    width: 3px;
+}
+
+.thoughts-text::-webkit-scrollbar-thumb {
+    background: rgba(34, 197, 94, 0.3);
+    border-radius: 2px;
+}
+
+.context-status {
+    padding-top: 8px;
+    border-top: 1px solid rgba(255, 255, 255, 0.05);
+    font-size: 0.6rem;
+    font-family: monospace;
+    letter-spacing: 0.1em;
+    color: rgba(6, 182, 212, 0.4);
+    text-align: center;
+}

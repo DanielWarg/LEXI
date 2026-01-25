@@ -151,9 +151,10 @@ async def initialize_lexi(device_index=None, output_device_index=None, device_na
     def on_audio_data(data_bytes):
         asyncio.create_task(sio.emit('audio_data', {'data': list(data_bytes)}))
 
-    # Callback to send CAL data to frontend
+    # Callback to send CAD data to frontend
     def on_cad_data(data):
-        pass
+        print(f"[SERVER] Sending CAD data: format={data.get('format', 'unknown')}")
+        asyncio.create_task(sio.emit('cad_data', data))
 
     # Callback to send Browser data to frontend
     def on_web_data(data):
@@ -171,11 +172,15 @@ async def initialize_lexi(device_index=None, output_device_index=None, device_na
 
     # Callback to send CAD status to frontend
     def on_cad_status(status):
-        pass
+        print(f"[SERVER] Sending CAD status: {status}")
+        if isinstance(status, str):
+            asyncio.create_task(sio.emit('cad_status', {'status': status}))
+        else:
+            asyncio.create_task(sio.emit('cad_status', status))
 
     # Callback to send CAD thoughts to frontend (streaming)
     def on_cad_thought(thought_text):
-        pass
+        asyncio.create_task(sio.emit('cad_thought', {'text': thought_text}))
 
     # Callback to send Project Update to frontend
     def on_project_update(project_name):
@@ -1022,15 +1027,7 @@ async def add_printer(sid, data):
         print(f"Error adding printer: {e}")
         await sio.emit('error', {'msg': f"Failed to add printer: {str(e)}"})
 
-@sio.event
-async def iterate_cad(sid, data):
-    print("Iterate CAD disabled")
-    await sio.emit('error', {'msg': "CAD functionality removed"})
-
-@sio.event
-async def generate_cad(sid, data):
-    print("Generate CAD disabled")
-    await sio.emit('error', {'msg': "CAD functionality removed"})
+# NOTE: generate_cad and iterate_cad are defined earlier in this file (around line 851)
 
 @sio.event
 async def print_stl(sid, data):

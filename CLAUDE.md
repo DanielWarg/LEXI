@@ -63,14 +63,12 @@ Each capability is a Python class in `backend/`:
 - `kasa_agent.py` - Smart home (TP-Link Kasa)
 - `project_manager.py` - File/project organization
 
-**Adding a new agent:**
-1. Create `backend/<name>_agent.py` with async methods
-2. Add tool schema to `backend/tools.py` or top of `lexi.py`
-3. Import and instantiate in `Lexi.__init__()`
-4. Add dispatch logic (elif) in `Lexi.receive_audio()`
-5. Create UI component in `src/components/modules/<Name>View.tsx`
-
-**Agent return values:** Return simple types (`str`, `dict`, `bool`, `None`), not exceptions. Wrap network calls in try/except.
+**Adding a new agent:** See `MODULE_INTEGRATION.md` for the complete integration contract including:
+- Agent class structure and async patterns
+- Tool schema definition for Gemini
+- Dispatch logic in `Lexi.receive_audio()`
+- Callback wiring for real-time updates
+- Best practices from existing agents (Kasa, Printer, Web)
 
 ### Audio Configuration
 - Input: 16kHz, mono, 16-bit PCM
@@ -95,6 +93,21 @@ When adding or removing features, follow this order to avoid black screen:
 ### Project Context
 - Default project: `projects/temp/` (cleared on startup)
 - User projects: `projects/<name>/` with `cad/`, `browser/`, `chat_history.jsonl`
+
+## UI Architecture
+
+### Workspace vs Active Tool Context Pattern
+- **Workspace (CentralCanvas)**: The main visual output/display area for each tool (3D viewport, browser preview, etc.)
+- **Active Tool Context (ToolMenu)**: Controls, inputs, and actions for the currently active tool
+
+### Adding New Tools
+1. Create a view component in `src/components/modules/` for the workspace display
+2. Create a context component in `src/components/tools/` for the controls (if needed)
+3. Register the context component in `ToolMenu.tsx`'s switch statement
+4. Register the view component in `CentralCanvas.tsx`
+
+### Auto-Open Behavior
+Tools auto-open when their data arrives via socket events. `MainLayout.tsx` listens for events like `browser_frame`, `cad_data`, `cad_status`. When data arrives, it sets `activeTool` to switch to the appropriate view.
 
 ## Code Style
 

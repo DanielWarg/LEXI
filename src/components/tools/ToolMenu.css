@@ -30,21 +30,40 @@
     /* Subtle glow */
 }
 
-.menu-content-placeholder {
-    flex-grow: 1;
+.menu-content {
+    flex: 1;
     display: flex;
+    flex-direction: column;
+    min-height: 0;
+    overflow: hidden;
+}
+
+.context-info {
+    display: flex;
+    flex-direction: column;
     align-items: center;
     justify-content: center;
     text-align: center;
-    opacity: 1;
-    /* Increased from 0.5 to allow white text to pop */
+    height: 100%;
+    gap: 4px;
 }
 
-.placeholder-text {
-    font-size: 0.85rem;
-    color: var(--text-main);
-    /* White */
-    line-height: 1.5;
+.context-label {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    margin: 0;
+}
+
+.context-value {
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: var(--color-cyan, #06b6d4);
+    margin: 0;
+}
+
+.context-hint {
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    margin: 0;
     opacity: 0.7;
-    /* Slight dimming for body */
 }
