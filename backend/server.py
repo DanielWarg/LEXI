@@ -183,6 +183,11 @@ async def initialize_lexi(device_index=None, output_device_index=None, device_na
     def on_cad_thought(thought_text):
         asyncio.create_task(sio.emit('cad_thought', {'text': thought_text}))
 
+    # Callback to send CAD zoom commands to frontend
+    def on_cad_zoom(data):
+        print(f"[SERVER] Sending CAD zoom: {data}")
+        asyncio.create_task(sio.emit('cad_zoom', data))
+
     # Callback to send Project Update to frontend
     def on_project_update(project_name):
         print(f"Sending Project Update: {project_name}")
@@ -215,6 +220,7 @@ async def initialize_lexi(device_index=None, output_device_index=None, device_na
             on_tool_confirmation=on_tool_confirmation,
             on_cad_status=on_cad_status,
             on_cad_thought=on_cad_thought,
+            on_cad_zoom=on_cad_zoom,
             on_project_update=on_project_update,
             on_device_update=on_device_update,
             on_error=on_error,
@@ -878,6 +884,14 @@ async def generate_cad(sid, data):
         import traceback
         traceback.print_exc()
         await sio.emit('error', {'msg': f"Generation Error: {str(e)}"})
+
+@sio.event
+async def cad_zoom(sid, data):
+    """Handle CAD viewport zoom commands from voice or UI."""
+    action = data.get('action', 'reset')
+    factor = data.get('factor', 1.5)
+    print(f"[SERVER] CAD zoom: {action} (factor: {factor})")
+    await sio.emit('cad_zoom', {'action': action, 'factor': factor})
 
 @sio.event
 async def prompt_web_agent(sid, data):

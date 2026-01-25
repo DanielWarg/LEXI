@@ -181,7 +181,22 @@ iterate_cad_tool = {
     "behavior": "NON_BLOCKING"
 }
 
-tools = [{'google_search': {}}, {"function_declarations": [run_web_agent, create_project_tool, switch_project_tool, list_projects_tool, list_smart_devices_tool, control_light_tool, discover_printers_tool, print_stl_tool, get_print_status_tool, generate_cad, iterate_cad_tool] + tools_list[0]['function_declarations'][1:]}]
+control_cad_view_tool = {
+    "name": "control_cad_view",
+    "description": "Styr kameran i CAD-visningen. Används för att zooma in, zooma ut eller återställa vyn till standardpositionen.",
+    "parameters": {
+        "type": "OBJECT",
+        "properties": {
+            "action": {
+                "type": "STRING",
+                "description": "Kameraåtgärden: 'in' för att zooma in, 'out' för att zooma ut, 'reset' för att återställa vyn."
+            }
+        },
+        "required": ["action"]
+    }
+}
+
+tools = [{'google_search': {}}, {"function_declarations": [run_web_agent, create_project_tool, switch_project_tool, list_projects_tool, list_smart_devices_tool, control_light_tool, discover_printers_tool, print_stl_tool, get_print_status_tool, generate_cad, iterate_cad_tool, control_cad_view_tool] + tools_list[0]['function_declarations'][1:]}]
 
 # --- CONFIG UPDATE: Enabled Transcription ---
 config = types.LiveConnectConfig(
@@ -222,7 +237,7 @@ from kasa_agent import KasaAgent
 from printer_agent import PrinterAgent
 
 class AudioLoop:
-    def __init__(self, video_mode=DEFAULT_MODE, on_audio_data=None, on_video_frame=None, on_cad_data=None, on_web_data=None, on_transcription=None, on_tool_confirmation=None, on_cad_status=None, on_cad_thought=None, on_project_update=None, on_device_update=None, on_error=None, on_tool_activate=None, input_device_index=None, input_device_name=None, output_device_index=None, video_device_index=0, kasa_agent=None):
+    def __init__(self, video_mode=DEFAULT_MODE, on_audio_data=None, on_video_frame=None, on_cad_data=None, on_web_data=None, on_transcription=None, on_tool_confirmation=None, on_cad_status=None, on_cad_thought=None, on_cad_zoom=None, on_project_update=None, on_device_update=None, on_error=None, on_tool_activate=None, input_device_index=None, input_device_name=None, output_device_index=None, video_device_index=0, kasa_agent=None):
         self.video_mode = video_mode
         self.on_audio_data = on_audio_data
         self.on_video_frame = on_video_frame
@@ -232,6 +247,7 @@ class AudioLoop:
         self.on_tool_confirmation = on_tool_confirmation
         self.on_cad_status = on_cad_status
         self.on_cad_thought = on_cad_thought
+        self.on_cad_zoom = on_cad_zoom
         self.on_project_update = on_project_update
         self.on_device_update = on_device_update
         self.on_error = on_error
@@ -809,7 +825,7 @@ class AudioLoop:
                         function_responses = []
                         for fc in response.tool_call.function_calls:
                             print(f"[LEXI] Processing tool: {fc.name} with args: {fc.args}")
-                            if fc.name in ["generate_cad", "run_web_agent", "write_file", "read_directory", "read_file", "create_project", "switch_project", "list_projects", "list_smart_devices", "control_light", "discover_printers", "print_stl", "get_print_status", "iterate_cad"]:
+                            if fc.name in ["generate_cad", "run_web_agent", "write_file", "read_directory", "read_file", "create_project", "switch_project", "list_projects", "list_smart_devices", "control_light", "discover_printers", "print_stl", "get_print_status", "iterate_cad", "control_cad_view"]:
                                 prompt = fc.args.get("prompt", "") # Prompt is not present for all tools
                                 
                                 # Check Permissions (Default to True if not set)
@@ -1201,6 +1217,23 @@ class AudioLoop:
                                         id=fc.id, name=fc.name, response={"result": result_str}
                                     )
                                     function_responses.append(function_response)
+
+                                elif fc.name == "control_cad_view":
+                                    action = fc.args.get("action", "reset")
+                                    print(f"[LEXI] [TOOL] Tool Call: 'control_cad_view' action='{action}'")
+
+                                    # Send zoom command to frontend
+                                    if self.on_cad_zoom:
+                                        self.on_cad_zoom({"action": action})
+
+                                    action_desc = {"in": "zoomad in", "out": "zoomad ut", "reset": "återställd"}.get(action, action)
+                                    result_str = f"Kameran har {action_desc}."
+
+                                    function_response = types.FunctionResponse(
+                                        id=fc.id, name=fc.name, response={"result": result_str}
+                                    )
+                                    function_responses.append(function_response)
+
                         if function_responses:
                             await self.session.send_tool_response(function_responses=function_responses)
                 
