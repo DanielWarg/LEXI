@@ -5,12 +5,16 @@ interface SocketContextType {
     socket: Socket | null;
     connected: boolean;
     isAuthenticated: boolean;
+    isSessionActive: boolean;
+    setIsSessionActive: (active: boolean) => void;
 }
 
-const SocketContext = createContext<SocketContextType>({ 
-    socket: null, 
+const SocketContext = createContext<SocketContextType>({
+    socket: null,
     connected: false,
-    isAuthenticated: false 
+    isAuthenticated: false,
+    isSessionActive: false,
+    setIsSessionActive: () => { }
 });
 
 export const useSocket = () => useContext(SocketContext);
@@ -19,6 +23,7 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     const [socket, setSocket] = useState<Socket | null>(null);
     const [connected, setConnected] = useState(false);
     const [isAuthenticated, setIsAuthenticated] = useState(false);
+    const [isSessionActive, setIsSessionActive] = useState(false);
 
     useEffect(() => {
         // Connect to real Python backend
@@ -51,6 +56,11 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({ childr
 
         newSocket.on('status', (data: any) => {
             console.log('📡 Status:', data.msg || data);
+            if (data.msg === 'Lexi Started') {
+                setIsSessionActive(true);
+            } else if (data.msg === 'Lexi Stopped') {
+                setIsSessionActive(false);
+            }
         });
 
         newSocket.on('error', (data: { msg: string }) => {
@@ -65,7 +75,13 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     }, []);
 
     return (
-        <SocketContext.Provider value={{ socket, connected, isAuthenticated }}>
+        <SocketContext.Provider value={{
+            socket,
+            connected,
+            isAuthenticated,
+            isSessionActive,
+            setIsSessionActive
+        }}>
             {children}
         </SocketContext.Provider>
     );

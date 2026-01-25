@@ -1,6 +1,6 @@
-import React from 'react';
-import { Globe, Printer, Box, FolderOpen, Home, Camera, Settings } from 'lucide-react';
+import { Globe, Printer, Box, FolderOpen, Home, Camera, Settings, Power } from 'lucide-react';
 import './DockBar.css';
+import { useSocket } from '../../context/SocketContext';
 
 interface DockBarProps {
     activeTool: string;
@@ -8,8 +8,34 @@ interface DockBarProps {
 }
 
 export const DockBar: React.FC<DockBarProps> = ({ activeTool, onSelectTool }) => {
+    const { socket, connected, isSessionActive } = useSocket();
+
+    const handlePowerClick = () => {
+        if (!socket || !connected) return;
+        if (isSessionActive) {
+            socket.emit('stop_audio');
+        } else {
+            socket.emit('start_audio');
+        }
+    };
+
     return (
         <div className="dock-bar">
+            {/* System Power Toggle */}
+            <button
+                className={`dock-item power-btn ${isSessionActive ? 'active' : ''}`}
+                onClick={handlePowerClick}
+                disabled={!connected}
+                title={isSessionActive ? "Deactivate Lexi" : "Activate Lexi"}
+                style={{
+                    color: isSessionActive ? '#10b981' : undefined
+                }}
+            >
+                <Power size={20} />
+            </button>
+
+            <div className="dock-divider"></div>
+
             {/* Web Agent */}
             <button
                 className={`dock-item ${activeTool === 'web' ? 'active' : ''}`}

@@ -13,9 +13,8 @@ export const VoiceWidget: React.FC = () => {
     const [input, setInput] = useState('');
     const [status, setStatus] = useState<'idle' | 'listening' | 'processing' | 'speaking'>('idle');
     const [history, setHistory] = useState<TranscriptItem[]>([]);
-    const [isSessionActive, setIsSessionActive] = useState(false);
     const [isMuted, setIsMuted] = useState(true);
-    const { socket, connected } = useSocket();
+    const { socket, connected, isSessionActive } = useSocket();
     const historyEndRef = useRef<HTMLDivElement>(null);
 
     useEffect(() => {
@@ -74,21 +73,13 @@ export const VoiceWidget: React.FC = () => {
         historyEndRef.current?.scrollIntoView({ behavior: 'smooth' });
     }, [history]);
 
-    const handleToggleSession = () => {
-        if (!socket) return;
-
-        if (isSessionActive) {
-            socket.emit('stop_audio');
-            setIsSessionActive(false);
-            setIsMuted(true);
-            setStatus('idle');
-        } else {
-            socket.emit('start_audio');
-            setIsSessionActive(true);
-            setIsMuted(false);
+    useEffect(() => {
+        if (isSessionActive && status === 'idle') {
             setStatus('listening');
+        } else if (!isSessionActive && status !== 'idle') {
+            setStatus('idle');
         }
-    };
+    }, [isSessionActive]);
 
     const handleToggleMute = () => {
         if (!socket || !isSessionActive) return;
@@ -122,16 +113,13 @@ export const VoiceWidget: React.FC = () => {
 
     return (
         <div className="voice-widget">
-            <div className="voice-header" style={{ justifyContent: 'space-between' }}>
-                <div className="flex items-center gap-2">
-                    <span className="text-xs font-mono text-cyan-500 tracking-widest">SYSTEM_STATUS:</span>
-                    <div className={`status-indicator ${status}`}>
-                        <div className="pulse-ring"></div>
-                    </div>
-                    <span className="status-text text-cyan-400">
-                        {connected ? status.toUpperCase() : 'OFFLINE'}
-                    </span>
+            <div className="flex items-center gap-2">
+                <div className={`status-indicator ${status}`}>
+                    <div className="pulse-ring"></div>
                 </div>
+                <span className="status-text text-cyan-400">
+                    {connected ? status.toUpperCase() : 'OFFLINE'}
+                </span>
             </div>
 
             <div className="transcript-area">
@@ -152,50 +140,35 @@ export const VoiceWidget: React.FC = () => {
                 <div ref={historyEndRef} />
             </div>
 
-            <div className="input-area" style={{ padding: '0.75rem', gap: '0.5rem' }}>
-                {/* Power / Session Toggle */}
-                <button
-                    className={`session-btn ${isSessionActive ? 'active' : ''}`}
-                    onClick={handleToggleSession}
-                    title={isSessionActive ? "Deactivate System" : "Activate System"}
-                    style={{
-                        color: isSessionActive ? '#10b981' : '#64748b',
-                        borderColor: isSessionActive ? '#10b981' : '#334155'
-                    }}
-                >
-                    <Power size={18} />
-                </button>
-
+            <div className="input-area">
                 {/* Mute Toggle */}
                 <button
                     className={`mic-btn ${!isMuted ? 'active' : ''}`}
                     onClick={handleToggleMute}
                     disabled={!isSessionActive}
                     title={isMuted ? 'Unmute' : 'Mute'}
-                    style={{ opacity: isSessionActive ? 1 : 0.5 }}
                 >
-                    {isMuted ? <MicOff size={18} /> : <Mic size={18} />}
+                    {isMuted ? <MicOff size={20} /> : <Mic size={20} />}
                 </button>
 
-                {/* Text Input - Always Enabled */}
-                <div className="relative flex-1">
+                {/* Text Input Group */}
+                <div className="input-wrapper">
                     <input
                         type="text"
-                        className="w-full bg-black/40 border border-cyan-800/30 rounded px-3 py-2 text-cyan-50 text-sm focus:outline-none focus:border-cyan-500/50 placeholder-cyan-800/50"
                         placeholder="INITIALIZE COMMAND..."
                         value={input}
                         onChange={(e) => setInput(e.target.value)}
                         onKeyDown={handleKeyDown}
                     />
-                </div>
 
-                <button
-                    className="send-btn text-cyan-500 hover:text-cyan-400"
-                    onClick={handleSendText}
-                    disabled={!input.trim()}
-                >
-                    <Send size={18} />
-                </button>
+                    <button
+                        className="send-btn"
+                        onClick={handleSendText}
+                        disabled={!input.trim()}
+                    >
+                        <Send size={18} />
+                    </button>
+                </div>
             </div>
         </div>
     );
