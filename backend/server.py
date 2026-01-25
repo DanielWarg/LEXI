@@ -135,6 +135,11 @@ async def startup_event():
 async def initialize_lexi(device_index=None, output_device_index=None, device_name=None, video_device_index=None, muted=False):
     global audio_loop, loop_task
     
+    # FORCE DEFAULT DEVICES FOR STABILITY (User Request)
+    print("[SERVER] Forced System Default Audio Devices for stability.")
+    device_index = None 
+    output_device_index = None
+    
     if audio_loop:
         if loop_task and not (loop_task.done() or loop_task.cancelled()):
             print("Lexi already running.")
