@@ -8,6 +8,10 @@ import './MainLayout.css';
 export const MainLayout: React.FC = () => {
   const [activeTool, setActiveTool] = React.useState('home');
 
+  const handleSelectTool = (tool: string) => {
+    setActiveTool(prev => prev === tool ? 'home' : tool);
+  };
+
   return (
     <div className="layout-container">
       {/* Unified Left Sidebar */}
@@ -22,7 +26,7 @@ export const MainLayout: React.FC = () => {
 
         {/* Floating Dock ToolBar */}
         <div className="workspace-dock-container">
-          <DockBar activeTool={activeTool} onSelectTool={setActiveTool} />
+          <DockBar activeTool={activeTool} onSelectTool={handleSelectTool} />
         </div>
       </main>
     </div>
