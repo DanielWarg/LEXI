@@ -126,9 +126,13 @@ async def startup_event():
     
     # Auto-start Lexi on startup
     print("[SERVER] Startup: Initializing Lexi...")
-    await initialize_lexi()
+    await initialize_lexi(
+        device_index=SETTINGS.get("input_device_index"),
+        output_device_index=SETTINGS.get("output_device_index"),
+        video_device_index=SETTINGS.get("video_device_index")
+    )
 
-async def initialize_lexi(device_index=None, device_name=None, muted=False):
+async def initialize_lexi(device_index=None, output_device_index=None, device_name=None, video_device_index=None, muted=False):
     global audio_loop, loop_task
     
     if audio_loop:
@@ -201,6 +205,8 @@ async def initialize_lexi(device_index=None, device_name=None, muted=False):
 
             input_device_index=device_index,
             input_device_name=device_name,
+            output_device_index=output_device_index,
+            video_device_index=video_device_index if video_device_index is not None else 0,
             kasa_agent=kasa_agent
         )
         print("AudioLoop initialized successfully.")
@@ -613,6 +619,7 @@ async def set_audio_device(sid, data):
         print("Restarting AudioLoop to apply device change...")
         await initialize_lexi(
             device_index=SETTINGS.get("input_device_index"),
+            output_device_index=SETTINGS.get("output_device_index"),
             video_device_index=SETTINGS.get("video_device_index")
         )
         await sio.emit('status', {'msg': f"{dev_type.capitalize()} device changed to index {index}"})
