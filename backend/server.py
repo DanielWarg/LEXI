@@ -8,7 +8,7 @@ if sys.platform == 'win32':
 
 import socketio
 import uvicorn
-from fastapi import FastAPI
+from fastapi import FastAPI, UploadFile, File
 import asyncio
 import threading
 import sys
@@ -19,10 +19,10 @@ from pathlib import Path
 
 
 
-# Ensure we can import ada
+# Ensure we can import lexi
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
-import ada
+import lexi
 from authenticator import FaceAuthenticator
 from kasa_agent import KasaAgent
 
@@ -124,16 +124,16 @@ async def startup_event():
     print("[SERVER] Startup: Initializing Kasa Agent...")
     await kasa_agent.initialize()
     
-    # Auto-start ADA on startup
-    print("[SERVER] Startup: Initializing ADA...")
-    await initialize_ada()
+    # Auto-start Lexi on startup
+    print("[SERVER] Startup: Initializing Lexi...")
+    await initialize_lexi()
 
-async def initialize_ada(device_index=None, device_name=None, muted=False):
+async def initialize_lexi(device_index=None, device_name=None, muted=False):
     global audio_loop, loop_task
     
     if audio_loop:
         if loop_task and not (loop_task.done() or loop_task.cancelled()):
-            print("ADA already running.")
+            print("Lexi already running.")
             if not muted:
                 audio_loop.set_paused(False)
             return
@@ -183,10 +183,10 @@ async def initialize_ada(device_index=None, device_name=None, muted=False):
         print(f"Sending Error to frontend: {msg}")
         asyncio.create_task(sio.emit('error', {'msg': msg}))
 
-    # Initialize ADA
+    # Initialize Lexi
     try:
         print(f"Initializing AudioLoop with device_index={device_index}")
-        audio_loop = ada.AudioLoop(
+        audio_loop = lexi.AudioLoop(
             video_mode="none", 
             on_audio_data=on_audio_data,
             on_cad_data=on_cad_data,
@@ -254,7 +254,7 @@ async def initialize_ada(device_index=None, device_name=None, muted=False):
         asyncio.create_task(monitor_printers_loop())
         
     except Exception as e:
-        print(f"CRITICAL ERROR STARTING ADA: {e}")
+        print(f"CRITICAL ERROR STARTING LEXI: {e}")
         import traceback
         traceback.print_exc()
         # await sio.emit('error', {'msg': f"Failed to start: {str(e)}"}) # No sid
@@ -263,6 +263,48 @@ async def initialize_ada(device_index=None, device_name=None, muted=False):
 @app.get("/status")
 async def status():
     return {"status": "running", "service": "Lexi Backend"}
+
+@app.post("/upload")
+async def upload_file(file: UploadFile = File(...)):
+    """Handle file uploads to the current project."""
+    if not audio_loop or not audio_loop.project_manager:
+        return {"error": "Lexi system not ready (AudioLoop/ProjectManager unavailable)"}
+    
+    try:
+        # Save to 'uploads' folder in current project
+        current_project_path = audio_loop.project_manager.get_current_project_path()
+        upload_dir = current_project_path / "uploads"
+        upload_dir.mkdir(exist_ok=True)
+        
+        # Sanitize filename (basic)
+        safe_filename = Path(file.filename).name
+        file_path = upload_dir / safe_filename
+        
+        # Write file
+        content = await file.read()
+        with open(file_path, "wb") as f:
+            f.write(content)
+            
+        print(f"[SERVER] Uploaded file saved to: {file_path}")
+        
+        # Notify clients
+        await sio.emit('status', {'msg': f"File uploaded: {safe_filename}"})
+        
+        # Log to chat/memory so Lexi knows
+        if audio_loop.project_manager:
+            audio_loop.project_manager.log_chat("System", f"User uploaded file: {safe_filename} (saved to uploads/)")
+            
+        # Refreh project view if needed
+        # await sio.emit('project_files_update', ...) 
+        
+        return {
+            "filename": safe_filename, 
+            "path": str(file_path), 
+            "project": audio_loop.project_manager.current_project
+        }
+    except Exception as e:
+        print(f"[SERVER] Upload failed: {e}")
+        return {"error": str(e)}
 
 @sio.event
 async def connect(sid, environ):
@@ -302,9 +344,9 @@ async def connect(sid, environ):
             print("Face Auth Disabled. Auto-authenticating.")
             await sio.emit('auth_status', {'authenticated': True})
             
-    # Try to ensure ADA is running if it crashed or wasn't started
+    # Try to ensure Lexi is running if it crashed or wasn't started
     if not audio_loop:
-        asyncio.create_task(initialize_ada(muted=True))
+        asyncio.create_task(initialize_lexi(muted=True))
 
 @sio.event
 async def disconnect(sid):
@@ -332,7 +374,7 @@ async def start_audio(sid, data=None):
         device_name = data.get('device_name')
         muted = data.get('muted', False)
             
-    await initialize_ada(device_index=device_index, device_name=device_name, muted=muted)
+    await initialize_lexi(device_index=device_index, device_name=device_name, muted=muted)
 
 
 async def monitor_printers_loop():
@@ -441,8 +483,8 @@ async def shutdown(sid, data=None):
 async def get_audio_devices(sid):
     print("Received get_audio_devices request")
     try:
-        input_devices = ada.get_input_devices() # List of (index, name)
-        output_devices = ada.get_output_devices() # List of (index, name)
+        input_devices = lexi.get_input_devices() # List of (index, name)
+        output_devices = lexi.get_output_devices() # List of (index, name)
         
         # Format for frontend
         inputs = [{"index": i, "name": name} for i, name in input_devices]
@@ -478,10 +520,10 @@ async def get_audio_devices(sid):
             SETTINGS["input_device_index"] = internal_candidate
             save_settings()
             
-            # Restart ADA to apply the new default immediately
+            # Restart Lexi to apply the new default immediately
             if audio_loop:
                 print("Restarting AudioLoop to apply auto-switch to internal mic...")
-                await initialize_ada(
+                await initialize_lexi(
                     device_index=SETTINGS.get("input_device_index"),
                     video_device_index=SETTINGS.get("video_device_index")
                 )
@@ -496,7 +538,7 @@ async def get_audio_devices(sid):
 async def get_video_devices(sid):
     print("Received get_video_devices request")
     try:
-        devices = ada.get_video_devices() # List of (index, name)
+        devices = lexi.get_video_devices() # List of (index, name)
         
         formatted = []
         internal_index = None 
@@ -533,10 +575,10 @@ async def get_video_devices(sid):
             SETTINGS["video_device_index"] = internal_index
             save_settings()
             
-            # Restart ADA to apply the new default immediately
+            # Restart Lexi to apply the new default immediately
             if audio_loop:
                 print("Restarting AudioLoop to apply auto-switch to internal camera...")
-                await initialize_ada(
+                await initialize_lexi(
                     device_index=SETTINGS.get("input_device_index"),
                     video_device_index=SETTINGS.get("video_device_index")
                 )
@@ -566,10 +608,10 @@ async def set_audio_device(sid, data):
          
     save_settings()
     
-    # Restart ADA if running to apply changes
+    # Restart Lexi if running to apply changes
     if audio_loop:
         print("Restarting AudioLoop to apply device change...")
-        await initialize_ada(
+        await initialize_lexi(
             device_index=SETTINGS.get("input_device_index"),
             video_device_index=SETTINGS.get("video_device_index")
         )

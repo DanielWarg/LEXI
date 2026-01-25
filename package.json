@@ -1,7 +1,7 @@
 {
-  "name": "ada-v2",
+  "name": "lexi-v2",
   "version": "1.0.0",
-  "description": "A.D.A V2 - AI Assistant",
+  "description": "Lexi V2 - AI Assistant",
   "private": true,
   "type": "module",
   "main": "electron/main.js",

@@ -266,7 +266,7 @@ Ingen stress. Ingen låtsasklarhet.""",
 
 pya = pyaudio.PyAudio()
 
-# from cad_agent import CadAgent
+from cad_agent import CadAgent
 from web_agent import WebAgent
 from kasa_agent import KasaAgent
 from printer_agent import PrinterAgent
@@ -315,7 +315,7 @@ class AudioLoop:
             if self.on_cad_status:
                 self.on_cad_status(status_info)
         
-        # self.cad_agent = CadAgent(on_thought=handle_cad_thought, on_status=handle_cad_status)
+        self.cad_agent = CadAgent(on_thought=handle_cad_thought, on_status=handle_cad_status)
         self.web_agent = WebAgent()
         self.kasa_agent = kasa_agent if kasa_agent else KasaAgent()
         self.printer_agent = PrinterAgent()
@@ -363,7 +363,7 @@ class AudioLoop:
         self._last_output_transcription = ""
 
     def update_permissions(self, new_perms):
-        print(f"[ADA DEBUG] [CONFIG] Updating tool permissions: {new_perms}")
+        print(f"[LEXI DEBUG] [CONFIG] Updating tool permissions: {new_perms}")
         self.permissions.update(new_perms)
 
     def set_paused(self, paused):
@@ -377,16 +377,16 @@ class AudioLoop:
         
     def resolve_tool_confirmation(self, request_id, confirmed):
         # ... (unchanged)
-        print(f"[ADA DEBUG] [RESOLVE] resolve_tool_confirmation called. ID: {request_id}, Confirmed: {confirmed}")
+        print(f"[LEXI DEBUG] [RESOLVE] resolve_tool_confirmation called. ID: {request_id}, Confirmed: {confirmed}")
         if request_id in self._pending_confirmations:
             future = self._pending_confirmations[request_id]
             if not future.done():
-                print(f"[ADA DEBUG] [RESOLVE] Future found and pending. Setting result to: {confirmed}")
+                print(f"[LEXI DEBUG] [RESOLVE] Future found and pending. Setting result to: {confirmed}")
                 future.set_result(confirmed)
             else:
-                 print(f"[ADA DEBUG] [WARN] Request {request_id} future already done. Result: {future.result()}")
+                 print(f"[LEXI DEBUG] [WARN] Request {request_id} future already done. Result: {future.result()}")
         else:
-            print(f"[ADA DEBUG] [WARN] Confirmation Request {request_id} not found in pending dict. Keys: {list(self._pending_confirmations.keys())}")
+            print(f"[LEXI DEBUG] [WARN] Confirmation Request {request_id} not found in pending dict. Keys: {list(self._pending_confirmations.keys())}")
 
     def clear_audio_queue(self):
         # ... (unchanged)
@@ -396,9 +396,9 @@ class AudioLoop:
                 self.audio_in_queue.get_nowait()
                 count += 1
             if count > 0:
-                print(f"[ADA DEBUG] [AUDIO] Cleared {count} chunks from playback queue due to interruption.")
+                print(f"[LEXI DEBUG] [AUDIO] Cleared {count} chunks from playback queue due to interruption.")
         except Exception as e:
-            print(f"[ADA DEBUG] [ERR] Failed to clear audio queue: {e}")
+            print(f"[LEXI DEBUG] [ERR] Failed to clear audio queue: {e}")
 
     # ... send_frame ...
     async def send_frame(self, frame_data):
@@ -426,7 +426,7 @@ class AudioLoop:
         
         if self.input_device_name:
             # ... match logic ...
-            print(f"[ADA] Attempting to find input device matching: '{self.input_device_name}'")
+            print(f"[LEXI] Attempting to find input device matching: '{self.input_device_name}'")
             count = pya.get_device_count()
             best_match = None
             
@@ -446,21 +446,21 @@ class AudioLoop:
                     continue
             
             if resolved_input_device_index is not None:
-                print(f"[ADA] Resolved input device '{self.input_device_name}' to index {resolved_input_device_index} ({best_match})")
+                print(f"[LEXI] Resolved input device '{self.input_device_name}' to index {resolved_input_device_index} ({best_match})")
             else:
-                print(f"[ADA] Could not find device matching '{self.input_device_name}'. Checking index...")
+                print(f"[LEXI] Could not find device matching '{self.input_device_name}'. Checking index...")
 
         # Fallback to index if Name lookup failed or wasn't provided
         if resolved_input_device_index is None and self.input_device_index is not None:
              try:
                  resolved_input_device_index = int(self.input_device_index)
-                 print(f"[ADA] Requesting Input Device Index: {resolved_input_device_index}")
+                 print(f"[LEXI] Requesting Input Device Index: {resolved_input_device_index}")
              except ValueError:
-                 print(f"[ADA] Invalid device index '{self.input_device_index}', reverting to default.")
+                 print(f"[LEXI] Invalid device index '{self.input_device_index}', reverting to default.")
                  resolved_input_device_index = None
 
         if resolved_input_device_index is None:
-             print("[ADA] Using Default Input Device")
+             print("[LEXI] Using Default Input Device")
 
         try:
             self.audio_stream = await asyncio.to_thread(
@@ -473,8 +473,8 @@ class AudioLoop:
                 frames_per_buffer=CHUNK_SIZE,
             )
         except OSError as e:
-            print(f"[ADA] [ERR] Failed to open audio input stream: {e}")
-            print("[ADA] [WARN] Audio features will be disabled. Please check microphone permissions.")
+            print(f"[LEXI] [ERR] Failed to open audio input stream: {e}")
+            print("[LEXI] [WARN] Audio features will be disabled. Please check microphone permissions.")
             return
 
         if __debug__:
@@ -497,7 +497,7 @@ class AudioLoop:
             
             # Flush buffer if requested (e.g. after pause)
             if self._clear_buffer_on_next_loop:
-                print("[ADA] Soft flushing audio buffer on resume (discarding ~0.6s)...")
+                print("[LEXI] Soft flushing audio buffer on resume (discarding ~0.6s)...")
                 # Discard next 10 chunks (~0.64s at 16k sample rate / 1024 chunk)
                 self._flush_count = 10 
                 self._clear_buffer_on_next_loop = False
@@ -537,13 +537,13 @@ class AudioLoop:
                     if not self._is_speaking:
                         # NEW Speech Utterance Started
                         self._is_speaking = True
-                        print(f"[ADA DEBUG] [VAD] Speech Detected (RMS: {rms}). Sending Video Frame.")
+                        print(f"[LEXI DEBUG] [VAD] Speech Detected (RMS: {rms}). Sending Video Frame.")
                         
                         # Send ONE frame
                         if self._latest_image_payload and self.out_queue:
                             await self.out_queue.put(self._latest_image_payload)
                         else:
-                            print(f"[ADA DEBUG] [VAD] No video frame available to send.")
+                            print(f"[LEXI DEBUG] [VAD] No video frame available to send.")
                             
                 else:
                     # Silence
@@ -553,7 +553,7 @@ class AudioLoop:
                         
                         elif time.time() - self._silence_start_time > SILENCE_DURATION:
                             # Silence confirmed, reset state
-                            print(f"[ADA DEBUG] [VAD] Silence detected. Resetting speech state.")
+                            print(f"[LEXI DEBUG] [VAD] Silence detected. Resetting speech state.")
                             self._is_speaking = False
                             self._silence_start_time = None
 
@@ -562,7 +562,7 @@ class AudioLoop:
                 await asyncio.sleep(0.1)
 
     async def handle_cad_request(self, prompt):
-        print(f"[ADA DEBUG] [CAD] Background Task Started: handle_cad_request('{prompt}')")
+        print(f"[LEXI DEBUG] [CAD] Background Task Started: handle_cad_request('{prompt}')")
         if self.on_cad_status:
             self.on_cad_status("generating")
             
@@ -571,7 +571,7 @@ class AudioLoop:
             import datetime
             timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
             new_project_name = f"Project_{timestamp}"
-            print(f"[ADA DEBUG] [CAD] Auto-creating project: {new_project_name}")
+            print(f"[LEXI DEBUG] [CAD] Auto-creating project: {new_project_name}")
             
             success, msg = self.project_manager.create_project(new_project_name)
             if success:
@@ -582,7 +582,7 @@ class AudioLoop:
                     if self.on_project_update:
                          self.on_project_update(new_project_name)
                 except Exception as e:
-                    print(f"[ADA DEBUG] [ERR] Failed to notify auto-project: {e}")
+                    print(f"[LEXI DEBUG] [ERR] Failed to notify auto-project: {e}")
 
         # Get project cad folder path
         cad_output_dir = str(self.project_manager.get_current_project_path() / "cad")
@@ -591,13 +591,13 @@ class AudioLoop:
         cad_data = await self.cad_agent.generate_prototype(prompt, output_dir=cad_output_dir)
         
         if cad_data:
-            print(f"[ADA DEBUG] [OK] CadAgent returned data successfully.")
-            print(f"[ADA DEBUG] [INFO] Data Check: {len(cad_data.get('vertices', []))} vertices, {len(cad_data.get('edges', []))} edges.")
+            print(f"[LEXI DEBUG] [OK] CadAgent returned data successfully.")
+            print(f"[LEXI DEBUG] [INFO] Data Check: {len(cad_data.get('vertices', []))} vertices, {len(cad_data.get('edges', []))} edges.")
             
             if self.on_cad_data:
-                print(f"[ADA DEBUG] [SEND] Dispatching data to frontend callback...")
+                print(f"[LEXI DEBUG] [SEND] Dispatching data to frontend callback...")
                 self.on_cad_data(cad_data)
-                print(f"[ADA DEBUG] [SENT] Dispatch complete.")
+                print(f"[LEXI DEBUG] [SENT] Dispatch complete.")
             
             # Save to Project
             if 'file_path' in cad_data:
@@ -610,12 +610,12 @@ class AudioLoop:
             completion_msg = "System Notification: CAD generation is complete! The 3D model is now displayed for the user. Let them know it's ready."
             try:
                 await self.session.send(input=completion_msg, end_of_turn=True)
-                print(f"[ADA DEBUG] [NOTE] Sent completion notification to model.")
+                print(f"[LEXI DEBUG] [NOTE] Sent completion notification to model.")
             except Exception as e:
-                 print(f"[ADA DEBUG] [ERR] Failed to send completion notification: {e}")
+                 print(f"[LEXI DEBUG] [ERR] Failed to send completion notification: {e}")
 
         else:
-            print(f"[ADA DEBUG] [ERR] CadAgent returned None.")
+            print(f"[LEXI DEBUG] [ERR] CadAgent returned None.")
             # Optionally notify failure
             try:
                 await self.session.send(input="System Notification: CAD generation failed.", end_of_turn=True)
@@ -625,14 +625,14 @@ class AudioLoop:
 
 
     async def handle_write_file(self, path, content):
-        print(f"[ADA DEBUG] [FS] Writing file: '{path}'")
+        print(f"[LEXI DEBUG] [FS] Writing file: '{path}'")
         
         # Auto-create project if stuck in temp
         if self.project_manager.current_project == "temp":
             import datetime
             timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
             new_project_name = f"Project_{timestamp}"
-            print(f"[ADA DEBUG] [FS] Auto-creating project: {new_project_name}")
+            print(f"[LEXI DEBUG] [FS] Auto-creating project: {new_project_name}")
             
             success, msg = self.project_manager.create_project(new_project_name)
             if success:
@@ -643,7 +643,7 @@ class AudioLoop:
                     if self.on_project_update:
                          self.on_project_update(new_project_name)
                 except Exception as e:
-                    print(f"[ADA DEBUG] [ERR] Failed to notify auto-project: {e}")
+                    print(f"[LEXI DEBUG] [ERR] Failed to notify auto-project: {e}")
         
         # Force path to be relative to current project
         # If absolute path is provided, we try to strip it or just ignore it and use basename
@@ -661,7 +661,7 @@ class AudioLoop:
         if not os.path.isabs(path):
              final_path = current_project_path / path
         
-        print(f"[ADA DEBUG] [FS] Resolved path: '{final_path}'")
+        print(f"[LEXI DEBUG] [FS] Resolved path: '{final_path}'")
 
         try:
             # Ensure parent exists
@@ -672,14 +672,14 @@ class AudioLoop:
         except Exception as e:
             result = f"Failed to write file '{path}': {str(e)}"
 
-        print(f"[ADA DEBUG] [FS] Result: {result}")
+        print(f"[LEXI DEBUG] [FS] Result: {result}")
         try:
              await self.session.send(input=f"System Notification: {result}", end_of_turn=True)
         except Exception as e:
-             print(f"[ADA DEBUG] [ERR] Failed to send fs result: {e}")
+             print(f"[LEXI DEBUG] [ERR] Failed to send fs result: {e}")
 
     async def handle_read_directory(self, path):
-        print(f"[ADA DEBUG] [FS] Reading directory: '{path}'")
+        print(f"[LEXI DEBUG] [FS] Reading directory: '{path}'")
         try:
             if not os.path.exists(path):
                 result = f"Directory '{path}' does not exist."
@@ -689,14 +689,14 @@ class AudioLoop:
         except Exception as e:
             result = f"Failed to read directory '{path}': {str(e)}"
 
-        print(f"[ADA DEBUG] [FS] Result: {result}")
+        print(f"[LEXI DEBUG] [FS] Result: {result}")
         try:
              await self.session.send(input=f"System Notification: {result}", end_of_turn=True)
         except Exception as e:
-             print(f"[ADA DEBUG] [ERR] Failed to send fs result: {e}")
+             print(f"[LEXI DEBUG] [ERR] Failed to send fs result: {e}")
 
     async def handle_read_file(self, path):
-        print(f"[ADA DEBUG] [FS] Reading file: '{path}'")
+        print(f"[LEXI DEBUG] [FS] Reading file: '{path}'")
         try:
             if not os.path.exists(path):
                 result = f"File '{path}' does not exist."
@@ -707,14 +707,14 @@ class AudioLoop:
         except Exception as e:
             result = f"Failed to read file '{path}': {str(e)}"
 
-        print(f"[ADA DEBUG] [FS] Result: {result}")
+        print(f"[LEXI DEBUG] [FS] Result: {result}")
         try:
              await self.session.send(input=f"System Notification: {result}", end_of_turn=True)
         except Exception as e:
-             print(f"[ADA DEBUG] [ERR] Failed to send fs result: {e}")
+             print(f"[LEXI DEBUG] [ERR] Failed to send fs result: {e}")
 
     async def handle_web_agent_request(self, prompt):
-        print(f"[ADA DEBUG] [WEB] Web Agent Task: '{prompt}'")
+        print(f"[LEXI DEBUG] [WEB] Web Agent Task: '{prompt}'")
         
         async def update_frontend(image_b64, log_text):
             if self.on_web_data:
@@ -722,13 +722,13 @@ class AudioLoop:
                  
         # Run the web agent and wait for it to return
         result = await self.web_agent.run_task(prompt, update_callback=update_frontend)
-        print(f"[ADA DEBUG] [WEB] Web Agent Task Returned: {result}")
+        print(f"[LEXI DEBUG] [WEB] Web Agent Task Returned: {result}")
         
         # Send the final result back to the main model
         try:
              await self.session.send(input=f"System Notification: Web Agent has finished.\nResult: {result}", end_of_turn=True)
         except Exception as e:
-             print(f"[ADA DEBUG] [ERR] Failed to send web agent result to model: {e}")
+             print(f"[LEXI DEBUG] [ERR] Failed to send web agent result to model: {e}")
 
     async def receive_audio(self):
         "Background task to reads from the websocket and write pcm chunks to the output queue"

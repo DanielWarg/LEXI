@@ -4,6 +4,12 @@ Tests for CAD Generation Agent.
 import pytest
 import asyncio
 import os
+import sys
+from pathlib import Path
+
+# Add backend to path
+BACKEND_DIR = Path(__file__).parent.parent / "backend"
+sys.path.insert(0, str(BACKEND_DIR))
 
 from cad_agent import CadAgent
 

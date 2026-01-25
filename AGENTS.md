@@ -1,5 +1,7 @@
 # AGENTS.md
 
+> **See [VISION.md](VISION.md) for the high-level philosophy of Lexi as an Entity.**
+
 ## 1. Build, Lint, and Test Commands
 
 ### Backend (`backend/`)
