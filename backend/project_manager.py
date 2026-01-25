@@ -13,6 +13,8 @@ class ProjectManager:
         # Ensure projects root exists
         if not self.projects_dir.exists():
             self.projects_dir.mkdir(parents=True)
+
+
             
         # Clear temp project on startup if it exists
         temp_path = self.projects_dir / "temp"

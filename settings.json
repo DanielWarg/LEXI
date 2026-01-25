@@ -14,5 +14,6 @@
     "kasa_devices": [],
     "camera_flipped": false,
     "video_device_index": 1,
-    "input_device_index": 1
+    "input_device_index": 1,
+    "output_device_index": 3
 }

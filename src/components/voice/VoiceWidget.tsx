@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Mic, MicOff, Send, MoreHorizontal, Phone, PhoneOff } from 'lucide-react';
+import { Mic, MicOff, Send, MoreHorizontal, Power } from 'lucide-react';
 import './VoiceWidget.css';
 import { useSocket } from '../../context/SocketContext';
 
@@ -30,26 +30,21 @@ export const VoiceWidget: React.FC = () => {
         const handleTranscription = (data: any) => {
             if (data.text) {
                 setHistory(prev => {
-                    // Map backend 'sender' to frontend 'speaker'
-                    // Backend sends "ADA" or "User" in 'sender' field.
                     const incomingSpeaker = (data.sender === 'User' || data.speaker === 'user') ? 'user' : 'ai';
-
                     const lastMsg = prev[prev.length - 1];
 
-                    // If we have a last message and it's from the same speaker, append text
                     if (lastMsg && lastMsg.speaker === incomingSpeaker) {
                         const newHistory = [...prev];
                         newHistory[newHistory.length - 1] = {
                             ...lastMsg,
                             text: lastMsg.text + (lastMsg.text.endsWith(' ') ? '' : ' ') + data.text,
-                            timestamp: new Date() // Update timestamp to latest activity
+                            timestamp: new Date()
                         };
                         return newHistory;
                     }
 
-                    // Otherwise create new message bubble
                     return [
-                        ...prev.slice(-100), // Keep last 100 items (increased from 10)
+                        ...prev.slice(-100),
                         {
                             text: data.text,
                             speaker: incomingSpeaker,
@@ -61,7 +56,6 @@ export const VoiceWidget: React.FC = () => {
         };
 
         const handleToolConfirmation = (data: any) => {
-            // Show tool confirmation request
             console.log('🔧 Tool confirmation requested:', data);
         };
 
@@ -80,35 +74,29 @@ export const VoiceWidget: React.FC = () => {
         historyEndRef.current?.scrollIntoView({ behavior: 'smooth' });
     }, [history]);
 
-    const handleStartSession = () => {
+    const handleToggleSession = () => {
         if (!socket) return;
-        socket.emit('start_audio');
-        setIsSessionActive(true);
-        setIsMuted(false);
-        setStatus('listening');
-    };
 
-    const handleStopSession = () => {
-        if (!socket) return;
-        socket.emit('stop_audio');
-        setIsSessionActive(false);
-        setIsMuted(true);
-        setStatus('idle');
+        if (isSessionActive) {
+            socket.emit('stop_audio');
+            setIsSessionActive(false);
+            setIsMuted(true);
+            setStatus('idle');
+        } else {
+            socket.emit('start_audio');
+            setIsSessionActive(true);
+            setIsMuted(false);
+            setStatus('listening');
+        }
     };
 
     const handleToggleMute = () => {
-        console.log('VoiceWidget: Mute Toggle Clicked. SessionActive:', isSessionActive, 'Current Muted:', isMuted);
-        if (!socket || !isSessionActive) {
-            console.warn('VoiceWidget: Toggle ignored - Socket/Session invalid');
-            return;
-        }
+        if (!socket || !isSessionActive) return;
 
         if (isMuted) {
-            console.log('VoiceWidget: Emitting resume_audio');
             socket.emit('resume_audio');
             setIsMuted(false);
         } else {
-            console.log('VoiceWidget: Emitting pause_audio');
             socket.emit('pause_audio');
             setIsMuted(true);
         }
@@ -134,52 +122,49 @@ export const VoiceWidget: React.FC = () => {
 
     return (
         <div className="voice-widget">
-            <div className="voice-header">
-                <div className={`status-indicator ${status}`}>
-                    <div className="pulse-ring"></div>
+            <div className="voice-header" style={{ justifyContent: 'space-between' }}>
+                <div className="flex items-center gap-2">
+                    <span className="text-xs font-mono text-cyan-500 tracking-widest">SYSTEM_STATUS:</span>
+                    <div className={`status-indicator ${status}`}>
+                        <div className="pulse-ring"></div>
+                    </div>
+                    <span className="status-text text-cyan-400">
+                        {connected ? status.toUpperCase() : 'OFFLINE'}
+                    </span>
                 </div>
-                <span className="status-text">
-                    {connected ? status.toUpperCase() : 'OFFLINE'}
-                </span>
-                <button className="icon-btn ghost"><MoreHorizontal size={16} /></button>
             </div>
 
             <div className="transcript-area">
                 {history.length === 0 && (
                     <div className="transcript-line ai">
-                        <span className="label">LEXI</span>
-                        <p>{connected ? 'Ready to connect...' : 'Waiting for backend...'}</p>
+                        <span className="label font-mono text-xs opacity-70 mb-1 block">LEXI</span>
+                        <p className="text-sm leading-relaxed">{connected ? 'Ready to connect...' : 'Waiting for backend...'}</p>
                     </div>
                 )}
                 {history.map((item, idx) => (
                     <div key={idx} className={`transcript-line ${item.speaker}`}>
-                        <span className="label">{item.speaker === 'ai' ? 'LEXI' : 'YOU'}</span>
-                        <p>{item.text}</p>
+                        <span className="label font-mono text-xs opacity-70 mb-1 block">
+                            {item.speaker === 'ai' ? 'LEXI' : 'OP'}
+                        </span>
+                        <p className="text-sm leading-relaxed">{item.text}</p>
                     </div>
                 ))}
                 <div ref={historyEndRef} />
             </div>
 
-            <div className="input-area">
-                {/* Session Control */}
-                {!isSessionActive ? (
-                    <button
-                        className="session-btn start"
-                        onClick={handleStartSession}
-                        disabled={!connected}
-                        title="Start voice session"
-                    >
-                        <Phone size={18} />
-                    </button>
-                ) : (
-                    <button
-                        className="session-btn stop"
-                        onClick={handleStopSession}
-                        title="End voice session"
-                    >
-                        <PhoneOff size={18} />
-                    </button>
-                )}
+            <div className="input-area" style={{ padding: '0.75rem', gap: '0.5rem' }}>
+                {/* Power / Session Toggle */}
+                <button
+                    className={`session-btn ${isSessionActive ? 'active' : ''}`}
+                    onClick={handleToggleSession}
+                    title={isSessionActive ? "Deactivate System" : "Activate System"}
+                    style={{
+                        color: isSessionActive ? '#10b981' : '#64748b',
+                        borderColor: isSessionActive ? '#10b981' : '#334155'
+                    }}
+                >
+                    <Power size={18} />
+                </button>
 
                 {/* Mute Toggle */}
                 <button
@@ -187,23 +172,27 @@ export const VoiceWidget: React.FC = () => {
                     onClick={handleToggleMute}
                     disabled={!isSessionActive}
                     title={isMuted ? 'Unmute' : 'Mute'}
+                    style={{ opacity: isSessionActive ? 1 : 0.5 }}
                 >
-                    {isMuted ? <MicOff size={20} /> : <Mic size={20} />}
+                    {isMuted ? <MicOff size={18} /> : <Mic size={18} />}
                 </button>
 
-                {/* Text Input */}
-                <input
-                    type="text"
-                    placeholder="Type a message..."
-                    value={input}
-                    onChange={(e) => setInput(e.target.value)}
-                    onKeyDown={handleKeyDown}
-                    disabled={!connected}
-                />
+                {/* Text Input - Always Enabled */}
+                <div className="relative flex-1">
+                    <input
+                        type="text"
+                        className="w-full bg-black/40 border border-cyan-800/30 rounded px-3 py-2 text-cyan-50 text-sm focus:outline-none focus:border-cyan-500/50 placeholder-cyan-800/50"
+                        placeholder="INITIALIZE COMMAND..."
+                        value={input}
+                        onChange={(e) => setInput(e.target.value)}
+                        onKeyDown={handleKeyDown}
+                    />
+                </div>
+
                 <button
-                    className="send-btn"
+                    className="send-btn text-cyan-500 hover:text-cyan-400"
                     onClick={handleSendText}
-                    disabled={!connected || !input.trim()}
+                    disabled={!input.trim()}
                 >
                     <Send size={18} />
                 </button>
