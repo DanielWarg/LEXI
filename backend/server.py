@@ -192,11 +192,16 @@ async def initialize_lexi(device_index=None, output_device_index=None, device_na
         print(f"Sending Error to frontend: {msg}")
         asyncio.create_task(sio.emit('error', {'msg': msg}))
 
+    # Callback to activate tool view in frontend
+    def on_tool_activate(tool):
+        print(f"[SERVER] Activating tool view: {tool}")
+        asyncio.create_task(sio.emit('activate_tool_view', {'tool': tool}))
+
     # Initialize Lexi
     try:
         print(f"Initializing AudioLoop with device_index={device_index}")
         audio_loop = lexi.AudioLoop(
-            video_mode="none", 
+            video_mode="none",
             on_audio_data=on_audio_data,
             on_cad_data=on_cad_data,
             on_web_data=on_web_data,
@@ -207,6 +212,7 @@ async def initialize_lexi(device_index=None, output_device_index=None, device_na
             on_project_update=on_project_update,
             on_device_update=on_device_update,
             on_error=on_error,
+            on_tool_activate=on_tool_activate,
 
             input_device_index=device_index,
             input_device_name=device_name,
@@ -456,13 +462,30 @@ async def confirm_tool(sid, data):
     # data: { "id": "...", "confirmed": True/False }
     request_id = data.get('id')
     confirmed = data.get('confirmed', False)
-    
+
     print(f"[SERVER DEBUG] Received confirmation response for {request_id}: {confirmed}")
-    
+
     if audio_loop:
         audio_loop.resolve_tool_confirmation(request_id, confirmed)
     else:
         print("Audio loop not active, cannot resolve confirmation.")
+
+@sio.event
+async def ui_canvas_resize(sid, data):
+    # data: { "width": 800, "height": 600 }
+    width = data.get('width')
+    height = data.get('height')
+
+    if not width or not height:
+        print(f"[SERVER] Invalid canvas resize data: {data}")
+        return
+
+    print(f"[SERVER] Canvas resize: {width}x{height}")
+
+    if audio_loop and audio_loop.web_agent:
+        await audio_loop.web_agent.set_viewport_size(width, height)
+    else:
+        print("[SERVER] Web agent not available for resize")
 
 @sio.event
 async def shutdown(sid, data=None):

@@ -222,19 +222,20 @@ from kasa_agent import KasaAgent
 from printer_agent import PrinterAgent
 
 class AudioLoop:
-    def __init__(self, video_mode=DEFAULT_MODE, on_audio_data=None, on_video_frame=None, on_cad_data=None, on_web_data=None, on_transcription=None, on_tool_confirmation=None, on_cad_status=None, on_cad_thought=None, on_project_update=None, on_device_update=None, on_error=None, input_device_index=None, input_device_name=None, output_device_index=None, video_device_index=0, kasa_agent=None):
+    def __init__(self, video_mode=DEFAULT_MODE, on_audio_data=None, on_video_frame=None, on_cad_data=None, on_web_data=None, on_transcription=None, on_tool_confirmation=None, on_cad_status=None, on_cad_thought=None, on_project_update=None, on_device_update=None, on_error=None, on_tool_activate=None, input_device_index=None, input_device_name=None, output_device_index=None, video_device_index=0, kasa_agent=None):
         self.video_mode = video_mode
         self.on_audio_data = on_audio_data
         self.on_video_frame = on_video_frame
         self.on_cad_data = on_cad_data
         self.on_web_data = on_web_data
         self.on_transcription = on_transcription
-        self.on_tool_confirmation = on_tool_confirmation 
+        self.on_tool_confirmation = on_tool_confirmation
         self.on_cad_status = on_cad_status
         self.on_cad_thought = on_cad_thought
         self.on_project_update = on_project_update
         self.on_device_update = on_device_update
         self.on_error = on_error
+        self.on_tool_activate = on_tool_activate
         self.input_device_index = input_device_index
         self.input_device_name = input_device_name
         self.output_device_index = output_device_index
@@ -684,11 +685,18 @@ class AudioLoop:
 
     async def handle_web_agent_request(self, prompt):
         print(f"[LEXI DEBUG] [WEB] Web Agent Task: '{prompt}'")
-        
+
+        # Activate the web tool view in UI
+        if self.on_tool_activate:
+            print(f"[LEXI] Activating tool view: web")
+            self.on_tool_activate('web')
+        else:
+            print(f"[LEXI] No UI canvas callback, running web agent headless")
+
         async def update_frontend(image_b64, log_text):
             if self.on_web_data:
-                 self.on_web_data({"image": image_b64, "log": log_text})
-                 
+                self.on_web_data({"image": image_b64, "log": log_text})
+
         # Run the web agent and wait for it to return
         result = await self.web_agent.run_task(prompt, update_callback=update_frontend)
         print(f"[LEXI DEBUG] [WEB] Web Agent Task Returned: {result}")

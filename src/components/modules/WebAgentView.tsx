@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useState, useRef, useCallback } from 'react';
 import { Globe, Send, Terminal } from 'lucide-react';
 import { useSocket } from '../../context/SocketContext';
 import './WebAgentView.css';
@@ -9,26 +9,56 @@ export const WebAgentView: React.FC = () => {
     const [imageSrc, setImageSrc] = useState<string | null>(null);
     const [logs, setLogs] = useState<string[]>([]);
     const logsEndRef = useRef<HTMLDivElement>(null);
+    const viewportRef = useRef<HTMLDivElement>(null);
+
+    // Send canvas size to backend
+    const sendCanvasSize = useCallback(() => {
+        if (!socket || !viewportRef.current) return;
+
+        const rect = viewportRef.current.getBoundingClientRect();
+        const width = Math.floor(rect.width);
+        const height = Math.floor(rect.height);
+
+        if (width > 0 && height > 0) {
+            console.log(`[WebAgentView] Sending canvas resize: ${width}x${height}`);
+            socket.emit('ui_canvas_resize', { width, height });
+        }
+    }, [socket]);
+
+    // Resize observer for viewport container
+    useEffect(() => {
+        if (!viewportRef.current) return;
+
+        // Send initial size
+        sendCanvasSize();
+
+        const resizeObserver = new ResizeObserver(() => {
+            sendCanvasSize();
+        });
+
+        resizeObserver.observe(viewportRef.current);
+
+        return () => {
+            resizeObserver.disconnect();
+        };
+    }, [sendCanvasSize]);
 
     useEffect(() => {
         if (!socket) return;
 
-        const handleFrame = (data: string) => {
-            setImageSrc(data);
-        };
-
-        const handleLog = (data: any) => {
-            // Assuming backend sends some logs for agent actions
-            const msg = typeof data === 'string' ? data : JSON.stringify(data);
-            setLogs(prev => [...prev.slice(-20), msg]); // Keep last 20
+        const handleFrame = (data: { image: string; log?: string }) => {
+            if (data.image) {
+                setImageSrc(data.image);
+            }
+            if (data.log) {
+                setLogs(prev => [...prev.slice(-20), data.log]);
+            }
         };
 
         socket.on('browser_frame', handleFrame);
-        // socket.on('web_agent_log', handleLog); // If this event exists
 
         return () => {
             socket.off('browser_frame', handleFrame);
-            // socket.off('web_agent_log', handleLog);
         };
     }, [socket]);
 
@@ -45,10 +75,10 @@ export const WebAgentView: React.FC = () => {
 
     return (
         <div className="web-agent-view">
-            <div className="agent-viewport">
+            <div className="agent-viewport" ref={viewportRef}>
                 {imageSrc ? (
                     <img
-                        src={`data:image/jpeg;base64,${imageSrc}`}
+                        src={`data:image/png;base64,${imageSrc}`}
                         alt="Browser View"
                         className="browser-image"
                     />

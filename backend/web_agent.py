@@ -26,12 +26,26 @@ class WebAgent:
         self.browser = None
         self.context = None
         self.page = None
+        # Viewport dimensions (can be updated by UI)
+        self.viewport_width = SCREEN_WIDTH
+        self.viewport_height = SCREEN_HEIGHT
 
-    def denormalize_x(self, x: int, width: int) -> int:
-        return int((x / 1000) * width)
+    async def set_viewport_size(self, width: int, height: int):
+        """Update viewport size. Called when UI canvas resizes."""
+        self.viewport_width = width
+        self.viewport_height = height
+        print(f"[WebAgent] Viewport set to {width}x{height}")
+        if self.page:
+            try:
+                await self.page.set_viewport_size({"width": width, "height": height})
+            except Exception as e:
+                print(f"[WebAgent] Failed to set viewport: {e}")
 
-    def denormalize_y(self, y: int, height: int) -> int:
-        return int((y / 1000) * height)
+    def denormalize_x(self, x: int) -> int:
+        return int((x / 1000) * self.viewport_width)
+
+    def denormalize_y(self, y: int) -> int:
+        return int((y / 1000) * self.viewport_height)
 
     async def execute_function_calls(self, function_calls):
         results = []
@@ -72,40 +86,40 @@ class WebAgent:
 
                 # --- MOUSE CLICKS & TYPING ---
                 elif fn_name == "click_at":
-                    x = self.denormalize_x(args["x"], SCREEN_WIDTH)
-                    y = self.denormalize_y(args["y"], SCREEN_HEIGHT)
+                    x = self.denormalize_x(args["x"])
+                    y = self.denormalize_y(args["y"])
                     await self.page.mouse.click(x, y)
-                    
+
                 elif fn_name == "type_text_at":
-                    x = self.denormalize_x(args["x"], SCREEN_WIDTH)
-                    y = self.denormalize_y(args["y"], SCREEN_HEIGHT)
+                    x = self.denormalize_x(args["x"])
+                    y = self.denormalize_y(args["y"])
                     text = args["text"]
                     press_enter = args.get("press_enter", False)
                     clear_before = args.get("clear_before_typing", True)
-                    
+
                     await self.page.mouse.click(x, y)
                     if clear_before:
                         # 'Meta+A' for Mac, 'Control+A' for Windows/Linux
                         # Simply using Control+A is usually fine for headless linux/windows envs
-                        await self.page.keyboard.press("Control+A") 
+                        await self.page.keyboard.press("Control+A")
                         await self.page.keyboard.press("Backspace")
-                    
+
                     await self.page.keyboard.type(text)
                     if press_enter:
                         await self.page.keyboard.press("Enter")
 
                 # --- MOUSE MOVEMENT / HOVER ---
                 elif fn_name == "hover_at":
-                    x = self.denormalize_x(args["x"], SCREEN_WIDTH)
-                    y = self.denormalize_y(args["y"], SCREEN_HEIGHT)
+                    x = self.denormalize_x(args["x"])
+                    y = self.denormalize_y(args["y"])
                     await self.page.mouse.move(x, y)
 
                 elif fn_name == "drag_and_drop":
-                    start_x = self.denormalize_x(args["x"], SCREEN_WIDTH)
-                    start_y = self.denormalize_y(args["y"], SCREEN_HEIGHT)
-                    end_x = self.denormalize_x(args["destination_x"], SCREEN_WIDTH)
-                    end_y = self.denormalize_y(args["destination_y"], SCREEN_HEIGHT)
-                    
+                    start_x = self.denormalize_x(args["x"])
+                    start_y = self.denormalize_y(args["y"])
+                    end_x = self.denormalize_x(args["destination_x"])
+                    end_y = self.denormalize_y(args["destination_y"])
+
                     await self.page.mouse.move(start_x, start_y)
                     await self.page.mouse.down()
                     await self.page.mouse.move(end_x, end_y)
@@ -120,11 +134,11 @@ class WebAgent:
                 elif fn_name == "scroll_document" or fn_name == "scroll_at":
                     magnitude = args.get("magnitude", 800)
                     direction = args.get("direction", "down")
-                    
+
                     # If scroll_at, move mouse there first
                     if fn_name == "scroll_at":
-                        x = self.denormalize_x(args["x"], SCREEN_WIDTH)
-                        y = self.denormalize_y(args["y"], SCREEN_HEIGHT)
+                        x = self.denormalize_x(args["x"])
+                        y = self.denormalize_y(args["y"])
                         await self.page.mouse.move(x, y)
 
                     dx, dy = 0, 0
@@ -132,7 +146,7 @@ class WebAgent:
                     elif direction == "up": dy = -magnitude
                     elif direction == "right": dx = magnitude
                     elif direction == "left": dx = -magnitude
-                    
+
                     await self.page.mouse.wheel(dx, dy)
 
                 else:
@@ -195,9 +209,9 @@ class WebAgent:
         async with async_playwright() as p:
             # Launch browser (Headless=True usually, but for dev we might keep it hidden)
             # Use headless=True for server deployment
-            self.browser = await p.chromium.launch(headless=True) 
+            self.browser = await p.chromium.launch(headless=True)
             self.context = await self.browser.new_context(
-                viewport={"width": SCREEN_WIDTH, "height": SCREEN_HEIGHT},
+                viewport={"width": self.viewport_width, "height": self.viewport_height},
                 user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
             )
             self.page = await self.context.new_page()
