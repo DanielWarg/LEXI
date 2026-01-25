@@ -232,7 +232,8 @@ async def initialize_lexi(device_index=None, output_device_index=None, device_na
             audio_loop.set_paused(True)
 
         print("Creating asyncio task for AudioLoop.run()")
-        loop_task = asyncio.create_task(audio_loop.run())
+        start_msg = "Systemmeddelande: Den här sessionen är med Ann-Christin. Tala enbart svenska."
+        loop_task = asyncio.create_task(audio_loop.run(start_message=start_msg))
         
         def handle_loop_exit(task):
             try:

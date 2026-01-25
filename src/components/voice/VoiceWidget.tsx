@@ -134,7 +134,7 @@ export const VoiceWidget: React.FC = () => {
                 {history.map((item, idx) => (
                     <div key={idx} className={`transcript-line ${item.speaker}`}>
                         <span className="label font-mono text-xs opacity-70 mb-1 block">
-                            {item.speaker === 'ai' ? 'LEXI' : 'OP'}
+                            {item.speaker === 'ai' ? 'LEXI' : 'ANN-CHRISTIN'}
                         </span>
                         <p className="text-sm leading-relaxed">{item.text}</p>
                     </div>
