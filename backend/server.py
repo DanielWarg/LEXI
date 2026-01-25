@@ -222,7 +222,7 @@ async def initialize_lexi(device_index=None, output_device_index=None, device_na
         # Start paused by default on startup if not overridden, or if muted requested
         # Actually, for chat to work, we need the session.
         # But for mic, we might want it paused. 
-        # ada.py 'paused' flag pauses audio reading.
+        # lexi.py 'paused' flag pauses audio reading.
         # Let's default to paused=True on startup to avoid hot mic, unless user explicitly starts it.
         # BUT, if we want "Hey Lexi" or similar later, we might need it on.
         # For now, let's respect 'muted' arg.
@@ -232,7 +232,12 @@ async def initialize_lexi(device_index=None, output_device_index=None, device_na
             audio_loop.set_paused(True)
 
         print("Creating asyncio task for AudioLoop.run()")
-        start_msg = "Systemmeddelande: Den här sessionen är med Ann-Christin. Tala enbart svenska."
+        start_msg = (
+            "Systemmeddelande: Du är nu i ett samtal med Ann-Christin. "
+            "Kommunicera på din naturliga svenska. Utgå från att allt hon säger är svenska, "
+            "även om tekniken ibland misstolkar 'Hej Lexi' som något annat. "
+            "Var hennes tänkpartner, håll det personligt och använd hennes namn ytterst sparsamt. Nu kör vi!"
+        )
         loop_task = asyncio.create_task(audio_loop.run(start_message=start_msg))
         
         def handle_loop_exit(task):

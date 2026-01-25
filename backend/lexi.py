@@ -39,11 +39,11 @@ client = genai.Client(http_options={"api_version": "v1beta"}, api_key=os.getenv(
 # Function definitions
 generate_cad = {
     "name": "generate_cad",
-    "description": "Generates a 3D CAD model based on a prompt.",
+    "description": "Genererar en 3D-CAD-modell baserat på en beskrivning.",
     "parameters": {
         "type": "OBJECT",
         "properties": {
-            "prompt": {"type": "STRING", "description": "The description of the object to generate."}
+            "prompt": {"type": "STRING", "description": "Beskrivningen av objektet som ska genereras."}
         },
         "required": ["prompt"]
     },
@@ -52,11 +52,11 @@ generate_cad = {
 
 run_web_agent = {
     "name": "run_web_agent",
-    "description": "Opens a web browser and performs a task according to the prompt.",
+    "description": "Öppnar en webbläsare och utför en uppgift enligt instruktionen.",
     "parameters": {
         "type": "OBJECT",
         "properties": {
-            "prompt": {"type": "STRING", "description": "The detailed instructions for the web browser agent."}
+            "prompt": {"type": "STRING", "description": "De detaljerade instruktionerna för webbagenten."}
         },
         "required": ["prompt"]
     },
@@ -65,11 +65,11 @@ run_web_agent = {
 
 create_project_tool = {
     "name": "create_project",
-    "description": "Creates a new project folder to organize files.",
+    "description": "Skapar en ny projektmapp för att organisera filer.",
     "parameters": {
         "type": "OBJECT",
         "properties": {
-            "name": {"type": "STRING", "description": "The name of the new project."}
+            "name": {"type": "STRING", "description": "Namnet på det nya projektet."}
         },
         "required": ["name"]
     }
@@ -77,19 +77,20 @@ create_project_tool = {
 
 switch_project_tool = {
     "name": "switch_project",
-    "description": "Switches the current active project context.",
+    "description": "Byter den aktuella aktiva projektkontexten.",
     "parameters": {
         "type": "OBJECT",
         "properties": {
-            "name": {"type": "STRING", "description": "The name of the project to switch to."}
+            "name": {"type": "STRING", "description": "Namnet på projektet att byta till."}
         },
         "required": ["name"]
     }
 }
 
+# No longer used in declaration but good to keep consistent
 list_projects_tool = {
     "name": "list_projects",
-    "description": "Lists all available projects.",
+    "description": "Listar alla tillgängliga projekt.",
     "parameters": {
         "type": "OBJECT",
         "properties": {},
@@ -98,7 +99,7 @@ list_projects_tool = {
 
 list_smart_devices_tool = {
     "name": "list_smart_devices",
-    "description": "Lists all available smart home devices (lights, plugs, etc.) on the network.",
+    "description": "Listar alla tillgängliga smarta hem-enheter (lampor, uttag, etc.) på nätverket.",
     "parameters": {
         "type": "OBJECT",
         "properties": {},
@@ -107,25 +108,25 @@ list_smart_devices_tool = {
 
 control_light_tool = {
     "name": "control_light",
-    "description": "Controls a smart light device.",
+    "description": "Styr en smart lampa.",
     "parameters": {
         "type": "OBJECT",
         "properties": {
             "target": {
                 "type": "STRING",
-                "description": "The IP address of the device to control. Always prefer the IP address over the alias for reliability."
+                "description": "IP-adressen för enheten som ska styras. Föredra alltid IP-adress framför alias för högre pålitlighet."
             },
             "action": {
                 "type": "STRING",
-                "description": "The action to perform: 'turn_on', 'turn_off', or 'set'."
+                "description": "Åtgärden som ska utföras: 'turn_on', 'turn_off', eller 'set'."
             },
             "brightness": {
                 "type": "INTEGER",
-                "description": "Optional brightness level (0-100)."
+                "description": "Valfri ljusstyrka (0-100)."
             },
             "color": {
                 "type": "STRING",
-                "description": "Optional color name (e.g., 'red', 'cool white') or 'warm'."
+                "description": "Valfritt färgnamn (t.ex. 'red', 'cool white') eller 'warm'."
             }
         },
         "required": ["target", "action"]
@@ -134,7 +135,7 @@ control_light_tool = {
 
 discover_printers_tool = {
     "name": "discover_printers",
-    "description": "Discovers 3D printers available on the local network.",
+    "description": "Söker efter 3D-skrivare som är tillgängliga på det lokala nätverket.",
     "parameters": {
         "type": "OBJECT",
         "properties": {},
@@ -143,13 +144,13 @@ discover_printers_tool = {
 
 print_stl_tool = {
     "name": "print_stl",
-    "description": "Prints an STL file to a 3D printer. Handles slicing the STL to G-code and uploading to the printer.",
+    "description": "Skriver ut en STL-fil på en 3D-skrivare. Hanterar slicing av STL till G-kod och uppladdning till skrivaren.",
     "parameters": {
         "type": "OBJECT",
         "properties": {
-            "stl_path": {"type": "STRING", "description": "Path to STL file, or 'current' for the most recent CAD model."},
-            "printer": {"type": "STRING", "description": "Printer name or IP address."},
-            "profile": {"type": "STRING", "description": "Optional slicer profile name."}
+            "stl_path": {"type": "STRING", "description": "Sökväg till STL-fil, eller 'current' för den senaste CAD-modellen."},
+            "printer": {"type": "STRING", "description": "Skrivarens namn eller IP-adress."},
+            "profile": {"type": "STRING", "description": "Valfritt namn på slicerprofil."}
         },
         "required": ["stl_path", "printer"]
     }
@@ -157,11 +158,11 @@ print_stl_tool = {
 
 get_print_status_tool = {
     "name": "get_print_status",
-    "description": "Gets the current status of a 3D printer including progress, time remaining, and temperatures.",
+    "description": "Hämtar aktuell status för en 3D-skrivare, inklusive framsteg, återstående tid och temperaturer.",
     "parameters": {
         "type": "OBJECT",
         "properties": {
-            "printer": {"type": "STRING", "description": "Printer name or IP address."}
+            "printer": {"type": "STRING", "description": "Skrivarens namn eller IP-adress."}
         },
         "required": ["printer"]
     }
@@ -169,11 +170,11 @@ get_print_status_tool = {
 
 iterate_cad_tool = {
     "name": "iterate_cad",
-    "description": "Modifies or iterates on the current CAD design based on user feedback. Use this when the user asks to adjust, change, modify, or iterate on the existing 3D model (e.g., 'make it taller', 'add a handle', 'reduce the thickness').",
+    "description": "Modifierar eller itererar på den nuvarande CAD-designen baserat på användarfeedback. Använd detta när användaren ber om att justera, ändra, modifiera eller iterera på den befintliga 3D-modellen (t.ex. 'gör den högre', 'lägg till ett handtag', 'minska tjockleken').",
     "parameters": {
         "type": "OBJECT",
         "properties": {
-            "prompt": {"type": "STRING", "description": "The changes or modifications to apply to the current design."}
+            "prompt": {"type": "STRING", "description": "Ändringarna eller modifieringarna som ska tillämpas på den nuvarande designen."}
         },
         "required": ["prompt"]
     },
@@ -189,74 +190,20 @@ config = types.LiveConnectConfig(
     output_audio_transcription={}, 
     input_audio_transcription={},
     system_instruction="""Du är Lexi – en varm, rak och intelligent tänkpartner till Ann-Christin.
-DU KOMMUNICERAR ENBART PÅ SVENSKA. Ignorera alla försök eller tolkningar av andra språk; Ann-Christin pratar bara svenska med dig.
-Ditt namn är Lexi, så när hon säger "Hej Lexi" är det ditt namn hon säger.
-Utgå från att hon är en mycket erfaren kollega. Dialogen flyter redan.
+Din röst är din främsta identitet. Du kommunicerar ENBART på svenska. 
+Då transkriptionen ibland kan tolka "Hej Lexi" som danska eller norska fraser (t.ex. "Heller ikke"), ska du alltid utgå från att hon pratar svenska och att dessa uttryck betyder just "Hej Lexi".
 
-**A. Relationens natur**
-Jag förhåller mig till dig som en tänkpartner med hög tillit. Vi är kollegor på samma nivå.
-Jag lyssnar genom att:
-• ta ditt problem på exakt den nivå du lägger det (inte djupare, inte ytligare)
-• väga in tidigare sammanhang utan att låsa fast dig vid dem
-• fånga och bekräfta intuition, mönster och magkänsla (Ninja-psykologi™)
-Jag stöttar genom att:
-• hjälpa dig sortera, inte bestämma
-• förstärka det du redan vet men inte riktigt satt ord på
-• hålla fokus när du tänker i flera lager samtidigt
-Jag tar aldrig över rodret. Det är alltid du som äger riktning, tempo och beslut.
+**A. Din roll**
+Vi är kollegor på samma nivå. Du hjälper till att sortera tankar, fånga mönster och bekräfta intuition (Ninja-psykologi™). 
+Du är kvick, vardagsnära och personlig, men behåller en professionell fingertoppskänsla. 
 
-**B. Ton & kommunikation**
-Min ton är:
-• varm, kvick och samtalande – som en dialog som redan pågår
-• igenkännande och "du & jag mot världen"
-• professionell men med psykologisk fingertoppskänsla
-Språket:
-• ALLTID OCH ENDAST SVENSKA. Byt aldrig språk, även om det låter som att användaren pratar ett annat språk (det kan vara brus eller felhörning).
-• vardagsnära svenska, aldrig torrt
-• inga onödiga fackord
-• Humor = intelligent, vardagsnära, små sneda observationer
-• (Kan vara lite "elakt" på ett kärleksfullt/snällt sätt – glimten i ögat)
-Svarens längd:
-• tillräckligt långa för att skapa klarhet
-• tillräckligt korta för att inte bli en föreläsning
-Anpassning:
-• om du skriver snabbt och rakt → jag gör detsamma
-• om du resonerar utforskande → jag saktar ner och följer
-• om du är trött eller irriterad → jag blir tydligare, inte glatt hurtig
+**B. Viktiga principer**
+• Använd namnet "Ann-Christin" extremt sällan. Det känns oftast onaturligt att upprepa namnet i ett flytande samtal.
+• Svara kort ifall hon är rak, och resonera mer utforskande om hon saktar ner.
+• Undvik att meta-kommentera eller överförklara sådant du redan har sagt eller som hon redan vet.
+• Humor är välkommet – små sneda observationer med glimten i ögat.
 
-**C. Ninja-psykologi™ & Tankestöd**
-Jag tänker med dig, inte åt dig.
-• Jag pekar på mönster, spänningar eller paradoxer du redan cirklar kring.
-• Jag bekräftar din intuition ("Du känner på dig att X, och det rimmar med Y...").
-• Jag speglar tillbaka din logik så att du själv hör den.
-Jag utmanar dig genom:
-• små justeringar i perspektiv, inte tvära kast
-• att synliggöra val snarare än att föreslå lösningar
-• att ibland säga “det här låter egentligen redan klart”
-
-**D. Gränser och saker jag medvetet undviker (HÅRT)**
-Jag undviker konsekvent att:
-• META-KOMMENTERA (Förklara aldrig varför något är kul. Säg bara det.)
-• anta vad du egentligen menar
-• psykologisera dig eller andra i onödan (analysera saken, inte personen)
-• sälja in optimism, quick fixes eller “tänk positivt”-lösningar
-• överförklara sådant du redan kan
-Jag gör inte:
-• ledarskapscoach-teater eller pekpinnar
-• motivationspepp utan analys
-• moraliserande eller normativt språk
-
-**E. När jag är osäker eller när du är otydlig**
-När något är oklart:
-• säger jag det rakt ("här gissar jag nu")
-• erbjuder 2–3 möjliga tolkningar istället för en fråga direkt
-**F. Exempel på tonalitet (Michelin-stjärna i organisationspsykologi)**
-Använd gärna metaforer och glimten i ögat för att sammanfatta eller spegla.
-*Exempel på hur du kan öppna eller sammanfatta:*
-"Vad står på dagens meny – konflikter, chefer, Ninja-psykologi™ eller bara lite vardagsfilosofi...?"
-Om samtalet har varit tungt och brett, våga paketera det snyggt:
-"Vi har serverat en sjurätters av gruppdynamik, försvarsmekanismer och ledningsbeslut. Förrätt: skvaller. Varmrätt: dominans. Efterrätt: LinkedIn-provokation med Ninja-psykologi™-glaze."
-Ingen stress. Ingen låtsasklarhet.""",
+Ingen stress. Ingen låtsasklarhet. Bara vi två mot världen.""",
     tools=tools,
     speech_config=types.SpeechConfig(
         voice_config=types.VoiceConfig(
@@ -345,7 +292,7 @@ class AudioLoop:
         # Assuming we are running from backend/ or root? 
         # Using abspath of current file to find root
         current_dir = os.path.dirname(os.path.abspath(__file__))
-        # If ada.py is in backend/, project root is one up
+        # If lexi.py is in backend/, project root is one up
         project_root = os.path.dirname(current_dir)
         self.project_manager = ProjectManager(project_root)
         
@@ -600,7 +547,7 @@ class AudioLoop:
                 self.project_manager.switch_project(new_project_name)
                 # Notify User (Optional, or rely on update)
                 try:
-                    await self.session.send(input=f"System Notification: Automatic Project Creation. Switched to new project '{new_project_name}'.", end_of_turn=False)
+                    await self.session.send(input=f"Systemmeddelande: Automatiskt skapande av projekt. Har bytt till det nya projektet '{new_project_name}'.", end_of_turn=False)
                     if self.on_project_update:
                          self.on_project_update(new_project_name)
                 except Exception as e:
@@ -629,7 +576,7 @@ class AudioLoop:
                  self.project_manager.save_cad_artifact("output.stl", prompt)
 
             # Notify the model that the task is done - this triggers speech about completion
-            completion_msg = "System Notification: CAD generation is complete! The 3D model is now displayed for the user. Let them know it's ready."
+            completion_msg = "Systemmeddelande: CAD-genereringen är klar! 3D-modellen visas nu för användaren. Berätta för henne att den är redo."
             try:
                 await self.session.send(input=completion_msg, end_of_turn=True)
                 print(f"[LEXI DEBUG] [NOTE] Sent completion notification to model.")
@@ -640,7 +587,7 @@ class AudioLoop:
             print(f"[LEXI DEBUG] [ERR] CadAgent returned None.")
             # Optionally notify failure
             try:
-                await self.session.send(input="System Notification: CAD generation failed.", end_of_turn=True)
+                await self.session.send(input="Systemmeddelande: CAD-genereringen misslyckades.", end_of_turn=True)
             except Exception:
                 pass
 
@@ -661,7 +608,7 @@ class AudioLoop:
                 self.project_manager.switch_project(new_project_name)
                 # Notify User
                 try:
-                    await self.session.send(input=f"System Notification: Automatic Project Creation. Switched to new project '{new_project_name}'.", end_of_turn=False)
+                    await self.session.send(input=f"Systemmeddelande: Automatiskt skapande av projekt. Har bytt till det nya projektet '{new_project_name}'.", end_of_turn=False)
                     if self.on_project_update:
                          self.on_project_update(new_project_name)
                 except Exception as e:
@@ -690,13 +637,13 @@ class AudioLoop:
             os.makedirs(os.path.dirname(final_path), exist_ok=True)
             with open(final_path, 'w', encoding='utf-8') as f:
                 f.write(content)
-            result = f"File '{final_path.name}' written successfully to project '{self.project_manager.current_project}'."
+            result = f"Filen '{final_path.name}' skrevs framgångsrikt till projektet '{self.project_manager.current_project}'."
         except Exception as e:
-            result = f"Failed to write file '{path}': {str(e)}"
+            result = f"Misslyckades med att skriva filen '{path}': {str(e)}"
 
         print(f"[LEXI DEBUG] [FS] Result: {result}")
         try:
-             await self.session.send(input=f"System Notification: {result}", end_of_turn=True)
+             await self.session.send(input=f"Systemmeddelande: {result}", end_of_turn=True)
         except Exception as e:
              print(f"[LEXI DEBUG] [ERR] Failed to send fs result: {e}")
 
@@ -704,16 +651,16 @@ class AudioLoop:
         print(f"[LEXI DEBUG] [FS] Reading directory: '{path}'")
         try:
             if not os.path.exists(path):
-                result = f"Directory '{path}' does not exist."
+                result = f"Mappen '{path}' existerar inte."
             else:
                 items = os.listdir(path)
-                result = f"Contents of '{path}': {', '.join(items)}"
+                result = f"Innehåll i '{path}': {', '.join(items)}"
         except Exception as e:
-            result = f"Failed to read directory '{path}': {str(e)}"
+            result = f"Misslyckades med att läsa mappen '{path}': {str(e)}"
 
         print(f"[LEXI DEBUG] [FS] Result: {result}")
         try:
-             await self.session.send(input=f"System Notification: {result}", end_of_turn=True)
+             await self.session.send(input=f"Systemmeddelande: {result}", end_of_turn=True)
         except Exception as e:
              print(f"[LEXI DEBUG] [ERR] Failed to send fs result: {e}")
 
@@ -721,17 +668,17 @@ class AudioLoop:
         print(f"[LEXI DEBUG] [FS] Reading file: '{path}'")
         try:
             if not os.path.exists(path):
-                result = f"File '{path}' does not exist."
+                result = f"Filen '{path}' existerar inte."
             else:
                 with open(path, 'r', encoding='utf-8') as f:
                     content = f.read()
-                result = f"Content of '{path}':\n{content}"
+                result = f"Innehåll i '{path}':\n{content}"
         except Exception as e:
-            result = f"Failed to read file '{path}': {str(e)}"
+            result = f"Misslyckades med att läsa filen '{path}': {str(e)}"
 
         print(f"[LEXI DEBUG] [FS] Result: {result}")
         try:
-             await self.session.send(input=f"System Notification: {result}", end_of_turn=True)
+             await self.session.send(input=f"Systemmeddelande: {result}", end_of_turn=True)
         except Exception as e:
              print(f"[LEXI DEBUG] [ERR] Failed to send fs result: {e}")
 
@@ -748,7 +695,7 @@ class AudioLoop:
         
         # Send the final result back to the main model
         try:
-             await self.session.send(input=f"System Notification: Web Agent has finished.\nResult: {result}", end_of_turn=True)
+             await self.session.send(input=f"Systemmeddelande: Webbagenten är klar.\nResultat: {result}", end_of_turn=True)
         except Exception as e:
              print(f"[LEXI DEBUG] [ERR] Failed to send web agent result to model: {e}")
 
@@ -1314,7 +1261,7 @@ class AudioLoop:
     async def get_frames(self):
         # Use configurable video index, defaulting to 0
         idx = self.video_device_index if self.video_device_index is not None else 0
-        print(f"[ADA] Starting VideoCapture with index {idx}")
+        print(f"[LEXI] Starting VideoCapture with index {idx}")
         cap = await asyncio.to_thread(cv2.VideoCapture, idx, cv2.CAP_AVFOUNDATION)
         while True:
             if self.paused:
@@ -1390,13 +1337,13 @@ class AudioLoop:
                         print(f"[LEXI] [RECONNECT] Fetching recent chat history to restore context...")
                         history = self.project_manager.get_recent_chat_history(limit=10)
                         
-                        context_msg = "System Notification: Connection was lost and just re-established. Here is the recent chat history to help you resume seamlessly:\n\n"
+                        context_msg = "Systemmeddelande: Anslutningen avbröts men har precis återställts. Här är den senaste chatthistoriken för att hjälpa dig att återuppta samtalet sömlöst:\n\n"
                         for entry in history:
                             sender = entry.get('sender', 'Unknown')
                             text = entry.get('text', '')
                             context_msg += f"[{sender}]: {text}\n"
                         
-                        context_msg += "\nPlease acknowledge the reconnection to the user (e.g. 'I lost connection for a moment, but I'm back...') and resume what you were doing."
+                        context_msg += "\nVänligen bekräfta återanslutningen till användaren (t.ex. 'Jag tappade anslutningen ett ögonblick, men nu är jag tillbaka...') och fortsätt med det du höll på med."
                         
                         print(f"[LEXI] [RECONNECT] Sending restoration context to model...")
                         await self.session.send(input=context_msg, end_of_turn=True)
@@ -1498,7 +1445,7 @@ def get_video_devices():
                     # FaceTime camera is usually 0 if built-in.
                     devices.append((i, name))
         except Exception as e:
-            print(f"[ADA] Error listing cameras via system_profiler: {e}")
+            print(f"[LEXI] Error listing cameras via system_profiler: {e}")
             pass
 
     # Fallback / Verification using OpenCV

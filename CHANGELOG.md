@@ -3,13 +3,15 @@
 ## [Unreleased] - 2026-01-25
 
 ### 🚀 New Features
-- **File Uploads:** Added new `/upload` endpoint to Backend (`server.py`) allowing users to upload files directly to the active project context (saved in `uploads/` folder).
-- **Vision Document:** Added `VISION.md` outlining the philosophy of Lexi as an "Entity" rather than a tool.
-- **Documentation:** Major rewrite of `README.md` to reflect the new Entity-first vision and removed deprecated features (Gesture Control). `AGENTS.md` updated to link to Vision.
+- **Identity Change:** Formally renamed the assistant from **Ada** to **Lexi** across the entire codebase, including file names, logs, and system prompts.
+- **Swedish Language Lock:** Implemented a robust Swedish-only communication policy.
+- **Phonetic Heuristics:** Added logic to correctly interpret common transcription errors (e.g., "Heller ikke") as "Hej Lexi".
 
 ### 🛠️ Improvements
-- **Dependencies:** Restored `python-multipart` to support file uploads.
-- **Cleanup:** Removed unused dependencies (`mss`) and clarified `mediapipe` usage.
+- **Language Consistency:** Translated all 15+ tool descriptions and system notifications to Swedish to prevent "context contamination" and maintain a consistent persona.
+- **Natural Interaction:** Refined system instructions to reduce the frequency of using the user's name ("Ann-Christin") and adopt a more natural "partner" tone.
+- **File Renaming:** Renamed `backend/ada.py` to `backend/lexi.py` and updated all internal imports.
+- **Tests:** Updated and verified all backend tool tests under the new Lexi naming convention.
 
 ---
 

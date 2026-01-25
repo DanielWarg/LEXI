@@ -1,34 +1,31 @@
 generate_cad_prototype_tool = {
     "name": "generate_cad_prototype",
-    "description": "Generates a 3D wireframe prototype based on a user's description. Use this when the user asks to 'visualize', 'prototype', 'create a wireframe', or 'design' something in 3D.",
+    "description": "Genererar en 3D-trådmodellsprototyp baserat på användarens beskrivning. Använd detta när användaren ber om att 'visualisera', 'prototypa', 'skapa en trådmodell' eller 'designa' något i 3D.",
     "parameters": {
         "type": "OBJECT",
         "properties": {
             "prompt": {
                 "type": "STRING",
-                "description": "The user's description of the object to prototype."
+                "description": "Användarens beskrivning av objektet som ska prototypas."
             }
         },
         "required": ["prompt"]
     }
 }
 
-
-
-
 write_file_tool = {
     "name": "write_file",
-    "description": "Writes content to a file at the specified path. Overwrites if exists.",
+    "description": "Skriver innehåll till en fil på den angivna sökvägen. Skriver över om filen redan finns.",
     "parameters": {
         "type": "OBJECT",
         "properties": {
             "path": {
                 "type": "STRING",
-                "description": "The path of the file to write to."
+                "description": "Sökvägen till filen som ska skrivas."
             },
             "content": {
                 "type": "STRING",
-                "description": "The content to write to the file."
+                "description": "Innehållet som ska skrivas till filen."
             }
         },
         "required": ["path", "content"]
@@ -37,13 +34,13 @@ write_file_tool = {
 
 read_directory_tool = {
     "name": "read_directory",
-    "description": "Lists the contents of a directory.",
+    "description": "Listar innehållet i en mapp.",
     "parameters": {
         "type": "OBJECT",
         "properties": {
             "path": {
                 "type": "STRING",
-                "description": "The path of the directory to list."
+                "description": "Sökvägen till mappen som ska listas."
             }
         },
         "required": ["path"]
@@ -52,13 +49,13 @@ read_directory_tool = {
 
 read_file_tool = {
     "name": "read_file",
-    "description": "Reads the content of a file.",
+    "description": "Läser innehållet i en fil.",
     "parameters": {
         "type": "OBJECT",
         "properties": {
             "path": {
                 "type": "STRING",
-                "description": "The path of the file to read."
+                "description": "Sökvägen till filen som ska läsas."
             }
         },
         "required": ["path"]
