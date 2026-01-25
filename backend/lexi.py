@@ -463,19 +463,38 @@ class AudioLoop:
              print("[LEXI] Using Default Input Device")
 
         try:
+            target_idx = resolved_input_device_index if resolved_input_device_index is not None else mic_info["index"]
             self.audio_stream = await asyncio.to_thread(
                 pya.open,
                 format=FORMAT,
                 channels=CHANNELS,
                 rate=SEND_SAMPLE_RATE,
                 input=True,
-                input_device_index=resolved_input_device_index if resolved_input_device_index is not None else mic_info["index"],
+                input_device_index=target_idx,
                 frames_per_buffer=CHUNK_SIZE,
             )
         except OSError as e:
-            print(f"[LEXI] [ERR] Failed to open audio input stream: {e}")
-            print("[LEXI] [WARN] Audio features will be disabled. Please check microphone permissions.")
-            return
+            print(f"[LEXI] [ERR] Failed to open audio input stream on index {resolved_input_device_index}: {e}")
+            if resolved_input_device_index is not None:
+                 print("[LEXI] Attempting fallback to Default Input Device...")
+                 try:
+                    self.audio_stream = await asyncio.to_thread(
+                        pya.open,
+                        format=FORMAT,
+                        channels=CHANNELS,
+                        rate=SEND_SAMPLE_RATE,
+                        input=True,
+                        input_device_index=mic_info["index"],
+                        frames_per_buffer=CHUNK_SIZE,
+                    )
+                    print("[LEXI] Fallback successful.")
+                 except OSError as e2:
+                     print(f"[LEXI] [ERR] Fallback also failed: {e2}")
+                     print("[LEXI] [WARN] Audio features will be disabled. Please check microphone permissions.")
+                     return
+            else:
+                 print("[LEXI] [WARN] Audio features will be disabled. Please check microphone permissions.")
+                 return
 
         if __debug__:
             kwargs = {"exception_on_overflow": False}
@@ -818,7 +837,7 @@ class AudioLoop:
                                 confirmation_required = self.permissions.get(fc.name, True)
                                 
                                 if not confirmation_required:
-                                    print(f"[ADA DEBUG] [TOOL] Permission check: '{fc.name}' -> AUTO-ALLOW")
+                                    print(f"[LEXI] [TOOL] Permission check: '{fc.name}' -> AUTO-ALLOW")
                                     # Skip confirmation block and jump to execution
                                     pass
                                 else:
@@ -826,7 +845,7 @@ class AudioLoop:
                                     if self.on_tool_confirmation:
                                         import uuid
                                         request_id = str(uuid.uuid4())
-                                    print(f"[ADA DEBUG] [STOP] Requesting confirmation for '{fc.name}' (ID: {request_id})")
+                                    print(f"[LEXI] [STOP] Requesting confirmation for '{fc.name}' (ID: {request_id})")
                                     
                                     future = asyncio.Future()
                                     self._pending_confirmations[request_id] = future
@@ -844,10 +863,10 @@ class AudioLoop:
                                     finally:
                                         self._pending_confirmations.pop(request_id, None)
 
-                                    print(f"[ADA DEBUG] [CONFIRM] Request {request_id} resolved. Confirmed: {confirmed}")
+                                    print(f"[LEXI] [CONFIRM] Request {request_id} resolved. Confirmed: {confirmed}")
 
                                     if not confirmed:
-                                        print(f"[ADA DEBUG] [DENY] Tool call '{fc.name}' denied by user.")
+                                        print(f"[LEXI] [DENY] Tool call '{fc.name}' denied by user.")
                                         function_response = types.FunctionResponse(
                                             id=fc.id,
                                             name=fc.name,
@@ -859,7 +878,7 @@ class AudioLoop:
                                         continue
 
                                     if not confirmed:
-                                        print(f"[ADA DEBUG] [DENY] Tool call '{fc.name}' denied by user.")
+                                        print(f"[LEXI] [DENY] Tool call '{fc.name}' denied by user.")
                                         function_response = types.FunctionResponse(
                                             id=fc.id,
                                             name=fc.name,
@@ -872,15 +891,15 @@ class AudioLoop:
 
                                 # If confirmed (or no callback configured, or auto-allowed), proceed
                                 if fc.name == "generate_cad":
-                                    print(f"\n[ADA DEBUG] --------------------------------------------------")
-                                    print(f"[ADA DEBUG] [TOOL] Tool Call Detected: 'generate_cad'")
-                                    print(f"[ADA DEBUG] [IN] Arguments: prompt='{prompt}'")
+                                    print(f"\n[LEXI] --------------------------------------------------")
+                                    print(f"[LEXI] [TOOL] Tool Call Detected: 'generate_cad'")
+                                    print(f"[LEXI] [IN] Arguments: prompt='{prompt}'")
                                     
                                     asyncio.create_task(self.handle_cad_request(prompt))
                                     # No function response needed - model already acknowledged when user asked
                                 
                                 elif fc.name == "run_web_agent":
-                                    print(f"[ADA DEBUG] [TOOL] Tool Call: 'run_web_agent' with prompt='{prompt}'")
+                                    print(f"[LEXI] [TOOL] Tool Call: 'run_web_agent' with prompt='{prompt}'")
                                     asyncio.create_task(self.handle_web_agent_request(prompt))
                                     
                                     result_text = "Web Navigation started. Do not reply to this message."
@@ -891,7 +910,7 @@ class AudioLoop:
                                             "result": result_text,
                                         }
                                     )
-                                    print(f"[ADA DEBUG] [RESPONSE] Sending function response: {function_response}")
+                                    print(f"[LEXI] [RESPONSE] Sending function response: {function_response}")
                                     function_responses.append(function_response)
 
 
@@ -899,7 +918,7 @@ class AudioLoop:
                                 elif fc.name == "write_file":
                                     path = fc.args["path"]
                                     content = fc.args["content"]
-                                    print(f"[ADA DEBUG] [TOOL] Tool Call: 'write_file' path='{path}'")
+                                    print(f"[LEXI] [TOOL] Tool Call: 'write_file' path='{path}'")
                                     asyncio.create_task(self.handle_write_file(path, content))
                                     function_response = types.FunctionResponse(
                                         id=fc.id, name=fc.name, response={"result": "Writing file..."}
@@ -908,7 +927,7 @@ class AudioLoop:
 
                                 elif fc.name == "read_directory":
                                     path = fc.args["path"]
-                                    print(f"[ADA DEBUG] [TOOL] Tool Call: 'read_directory' path='{path}'")
+                                    print(f"[LEXI] [TOOL] Tool Call: 'read_directory' path='{path}'")
                                     asyncio.create_task(self.handle_read_directory(path))
                                     function_response = types.FunctionResponse(
                                         id=fc.id, name=fc.name, response={"result": "Reading directory..."}
@@ -917,7 +936,7 @@ class AudioLoop:
 
                                 elif fc.name == "read_file":
                                     path = fc.args["path"]
-                                    print(f"[ADA DEBUG] [TOOL] Tool Call: 'read_file' path='{path}'")
+                                    print(f"[LEXI] [TOOL] Tool Call: 'read_file' path='{path}'")
                                     asyncio.create_task(self.handle_read_file(path))
                                     function_response = types.FunctionResponse(
                                         id=fc.id, name=fc.name, response={"result": "Reading file..."}
@@ -926,7 +945,7 @@ class AudioLoop:
 
                                 elif fc.name == "create_project":
                                     name = fc.args["name"]
-                                    print(f"[ADA DEBUG] [TOOL] Tool Call: 'create_project' name='{name}'")
+                                    print(f"[LEXI] [TOOL] Tool Call: 'create_project' name='{name}'")
                                     success, msg = self.project_manager.create_project(name)
                                     if success:
                                         # Auto-switch to the newly created project
@@ -941,25 +960,25 @@ class AudioLoop:
 
                                 elif fc.name == "switch_project":
                                     name = fc.args["name"]
-                                    print(f"[ADA DEBUG] [TOOL] Tool Call: 'switch_project' name='{name}'")
+                                    print(f"[LEXI] [TOOL] Tool Call: 'switch_project' name='{name}'")
                                     success, msg = self.project_manager.switch_project(name)
                                     if success:
                                         if self.on_project_update:
                                             self.on_project_update(name)
                                         # Gather project context and send to AI (silently, no response expected)
                                         context = self.project_manager.get_project_context()
-                                        print(f"[ADA DEBUG] [PROJECT] Sending project context to AI ({len(context)} chars)")
+                                        print(f"[LEXI] [PROJECT] Sending project context to AI ({len(context)} chars)")
                                         try:
                                             await self.session.send(input=f"System Notification: {msg}\n\n{context}", end_of_turn=False)
                                         except Exception as e:
-                                            print(f"[ADA DEBUG] [ERR] Failed to send project context: {e}")
+                                            print(f"[LEXI] [ERR] Failed to send project context: {e}")
                                     function_response = types.FunctionResponse(
                                         id=fc.id, name=fc.name, response={"result": msg}
                                     )
                                     function_responses.append(function_response)
                                 
                                 elif fc.name == "list_projects":
-                                    print(f"[ADA DEBUG] [TOOL] Tool Call: 'list_projects'")
+                                    print(f"[LEXI] [TOOL] Tool Call: 'list_projects'")
                                     projects = self.project_manager.list_projects()
                                     function_response = types.FunctionResponse(
                                         id=fc.id, name=fc.name, response={"result": f"Available projects: {', '.join(projects)}"}
@@ -967,7 +986,7 @@ class AudioLoop:
                                     function_responses.append(function_response)
 
                                 elif fc.name == "list_smart_devices":
-                                    print(f"[ADA DEBUG] [TOOL] Tool Call: 'list_smart_devices'")
+                                    print(f"[LEXI] [TOOL] Tool Call: 'list_smart_devices'")
                                     # Use cached devices directly for speed
                                     # devices_dict is {ip: SmartDevice}
                                     
@@ -1021,7 +1040,7 @@ class AudioLoop:
                                     brightness = fc.args.get("brightness")
                                     color = fc.args.get("color")
                                     
-                                    print(f"[ADA DEBUG] [TOOL] Tool Call: 'control_light' Target='{target}' Action='{action}'")
+                                    print(f"[LEXI] [TOOL] Tool Call: 'control_light' Target='{target}' Action='{action}'")
                                     
                                     result_msg = f"Action '{action}' on '{target}' failed."
                                     success = False
@@ -1095,7 +1114,7 @@ class AudioLoop:
                                     function_responses.append(function_response)
 
                                 elif fc.name == "discover_printers":
-                                    print(f"[ADA DEBUG] [TOOL] Tool Call: 'discover_printers'")
+                                    print(f"[LEXI] [TOOL] Tool Call: 'discover_printers'")
                                     printers = await self.printer_agent.discover_printers()
                                     # Format for model
                                     if printers:
@@ -1116,7 +1135,7 @@ class AudioLoop:
                                     printer = fc.args["printer"]
                                     profile = fc.args.get("profile")
                                     
-                                    print(f"[ADA DEBUG] [TOOL] Tool Call: 'print_stl' STL='{stl_path}' Printer='{printer}'")
+                                    print(f"[LEXI] [TOOL] Tool Call: 'print_stl' STL='{stl_path}' Printer='{printer}'")
                                     
                                     # Resolve 'current' to project STL
                                     if stl_path.lower() == "current":
@@ -1140,7 +1159,7 @@ class AudioLoop:
 
                                 elif fc.name == "get_print_status":
                                     printer = fc.args["printer"]
-                                    print(f"[ADA DEBUG] [TOOL] Tool Call: 'get_print_status' Printer='{printer}'")
+                                    print(f"[LEXI] [TOOL] Tool Call: 'get_print_status' Printer='{printer}'")
                                     
                                     status = await self.printer_agent.get_print_status(printer)
                                     if status:
@@ -1169,7 +1188,7 @@ class AudioLoop:
 
                                 elif fc.name == "iterate_cad":
                                     prompt = fc.args["prompt"]
-                                    print(f"[ADA DEBUG] [TOOL] Tool Call: 'iterate_cad' Prompt='{prompt}'")
+                                    print(f"[LEXI] [TOOL] Tool Call: 'iterate_cad' Prompt='{prompt}'")
                                     
                                     # Emit status
                                     if self.on_cad_status:
@@ -1182,20 +1201,20 @@ class AudioLoop:
                                     cad_data = await self.cad_agent.iterate_prototype(prompt, output_dir=cad_output_dir)
                                     
                                     if cad_data:
-                                        print(f"[ADA DEBUG] [OK] CadAgent iteration returned data successfully.")
+                                        print(f"[LEXI] [OK] CadAgent iteration returned data successfully.")
                                         
                                         # Dispatch to frontend
                                         if self.on_cad_data:
-                                            print(f"[ADA DEBUG] [SEND] Dispatching iterated CAD data to frontend...")
+                                            print(f"[LEXI] [SEND] Dispatching iterated CAD data to frontend...")
                                             self.on_cad_data(cad_data)
-                                            print(f"[ADA DEBUG] [SENT] Dispatch complete.")
+                                            print(f"[LEXI] [SENT] Dispatch complete.")
                                         
                                         # Save to Project
                                         self.project_manager.save_cad_artifact("output.stl", f"Iteration: {prompt}")
                                         
                                         result_str = f"Successfully iterated design: {prompt}. The updated 3D model is now displayed."
                                     else:
-                                        print(f"[ADA DEBUG] [ERR] CadAgent iteration returned None.")
+                                        print(f"[LEXI] [ERR] CadAgent iteration returned None.")
                                         result_str = f"Failed to iterate design with prompt: {prompt}"
                                     
                                     function_response = types.FunctionResponse(
@@ -1217,16 +1236,41 @@ class AudioLoop:
             raise e
 
     async def play_audio(self):
-        stream = await asyncio.to_thread(
-            pya.open,
-            format=FORMAT,
-            channels=CHANNELS,
-            rate=RECEIVE_SAMPLE_RATE,
-            output=True,
-            output_device_index=self.output_device_index,
-        )
+        stereo_mode = False
+        try:
+            stream = await asyncio.to_thread(
+                pya.open,
+                format=FORMAT,
+                channels=CHANNELS,
+                rate=RECEIVE_SAMPLE_RATE,
+                output=True,
+                output_device_index=self.output_device_index,
+            )
+        except OSError as e:
+            if e.errno == -9998: # Invalid number of channels
+                print(f"[LEXI] [WARN] Mono output not supported by device. Falling back to Stereo channel count.")
+                stream = await asyncio.to_thread(
+                    pya.open,
+                    format=FORMAT,
+                    channels=2, # Force Stereo
+                    rate=RECEIVE_SAMPLE_RATE,
+                    output=True,
+                    output_device_index=self.output_device_index,
+                )
+                stereo_mode = True
+            else:
+                raise e
         while True:
             bytestream = await self.audio_in_queue.get()
+
+            # Handle Stereo Conversion
+            if stereo_mode:
+                try:
+                    import audioop
+                    # Convert Mono to Stereo: width=2 (16-bit), factors 1.0
+                    bytestream = audioop.tostereo(bytestream, 2, 1, 1)
+                except ImportError:
+                    pass # Should not happen on standard Python installs
             
             # PERFORMANCE DEBUG
             queue_size = self.audio_in_queue.qsize()
@@ -1290,7 +1334,7 @@ class AudioLoop:
         
         while not self.stop_event.is_set():
             try:
-                print(f"[ADA DEBUG] [CONNECT] Connecting to Gemini Live API...")
+                print(f"[LEXI] [CONNECT] Connecting to Gemini Live API...")
                 async with (
                     client.aio.live.connect(model=MODEL, config=config) as session,
                     asyncio.TaskGroup() as tg,
@@ -1315,7 +1359,7 @@ class AudioLoop:
                     # Handle Startup vs Reconnect Logic
                     if not is_reconnect:
                         if start_message:
-                            print(f"[ADA DEBUG] [INFO] Sending start message: {start_message}")
+                            print(f"[LEXI] [INFO] Sending start message: {start_message}")
                             await self.session.send(input=start_message, end_of_turn=True)
                         
                         # Sync Project State
@@ -1323,9 +1367,9 @@ class AudioLoop:
                             self.on_project_update(self.project_manager.current_project)
                     
                     else:
-                        print(f"[ADA DEBUG] [RECONNECT] Connection restored.")
+                        print(f"[LEXI] [RECONNECT] Connection restored.")
                         # Restore Context
-                        print(f"[ADA DEBUG] [RECONNECT] Fetching recent chat history to restore context...")
+                        print(f"[LEXI] [RECONNECT] Fetching recent chat history to restore context...")
                         history = self.project_manager.get_recent_chat_history(limit=10)
                         
                         context_msg = "System Notification: Connection was lost and just re-established. Here is the recent chat history to help you resume seamlessly:\n\n"
@@ -1336,7 +1380,7 @@ class AudioLoop:
                         
                         context_msg += "\nPlease acknowledge the reconnection to the user (e.g. 'I lost connection for a moment, but I'm back...') and resume what you were doing."
                         
-                        print(f"[ADA DEBUG] [RECONNECT] Sending restoration context to model...")
+                        print(f"[LEXI] [RECONNECT] Sending restoration context to model...")
                         await self.session.send(input=context_msg, end_of_turn=True)
 
                     # Reset retry delay on successful connection
@@ -1356,17 +1400,19 @@ class AudioLoop:
                     await self.stop_event.wait()
 
             except asyncio.CancelledError:
-                print(f"[ADA DEBUG] [STOP] Main loop cancelled.")
+                print(f"[LEXI] [STOP] Main loop cancelled.")
                 break
                 
             except Exception as e:
+                import traceback
+                traceback.print_exc()
                 # This catches the ExceptionGroup from TaskGroup or direct exceptions
-                print(f"[ADA DEBUG] [ERR] Connection Error: {e}")
+                print(f"[LEXI] [ERR] Connection Error: {e}")
                 
                 if self.stop_event.is_set():
                     break
                 
-                print(f"[ADA DEBUG] [RETRY] Reconnecting in {retry_delay} seconds...")
+                print(f"[LEXI] [RETRY] Reconnecting in {retry_delay} seconds...")
                 await asyncio.sleep(retry_delay)
                 retry_delay = min(retry_delay * 2, 10) # Exponential backoff capped at 10s
                 is_reconnect = True # Next loop will be a reconnect
@@ -1381,24 +1427,29 @@ class AudioLoop:
 
 def get_input_devices():
     p = pyaudio.PyAudio()
-    info = p.get_host_api_info_by_index(0)
-    numdevices = info.get('deviceCount')
+    numdevices = p.get_device_count()
     devices = []
     for i in range(0, numdevices):
-        if (p.get_device_info_by_host_api_device_index(0, i).get('maxInputChannels')) > 0:
-            devices.append((i, p.get_device_info_by_host_api_device_index(0, i).get('name')))
+        try:
+            info = p.get_device_info_by_index(i)
+            if info.get('maxInputChannels') > 0:
+                devices.append((i, info.get('name')))
+        except Exception:
+            pass
     p.terminate()
     return devices
 
 def get_output_devices():
     p = pyaudio.PyAudio()
-    info = p.get_host_api_info_by_index(0)
-    numdevices = info.get('deviceCount')
+    numdevices = p.get_device_count()
     devices = []
     for i in range(0, numdevices):
-        if (p.get_device_info_by_host_api_device_index(0, i).get('maxOutputChannels')) > 0:
-            devices.append((i, p.get_device_info_by_host_api_device_index(0, i).get('name')))
-    p.terminate()
+        try:
+            info = p.get_device_info_by_index(i)
+            if info.get('maxOutputChannels') > 0:
+                devices.append((i, info.get('name')))
+        except Exception:
+            pass
     p.terminate()
     return devices
 
