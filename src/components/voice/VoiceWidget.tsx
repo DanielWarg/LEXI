@@ -74,10 +74,12 @@ export const VoiceWidget: React.FC = () => {
     }, [history]);
 
     useEffect(() => {
-        if (isSessionActive && status === 'idle') {
-            setStatus('listening');
-        } else if (!isSessionActive && status !== 'idle') {
-            setStatus('idle');
+        if (isSessionActive) {
+            if (status === 'idle') setStatus('listening');
+            setIsMuted(false);
+        } else {
+            if (status !== 'idle') setStatus('idle');
+            setIsMuted(true);
         }
     }, [isSessionActive]);
 

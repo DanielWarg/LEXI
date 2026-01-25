@@ -8,14 +8,16 @@ interface DockBarProps {
 }
 
 export const DockBar: React.FC<DockBarProps> = ({ activeTool, onSelectTool }) => {
-    const { socket, connected, isSessionActive } = useSocket();
+    const { socket, connected, isSessionActive, setIsSessionActive } = useSocket();
 
     const handlePowerClick = () => {
         if (!socket || !connected) return;
         if (isSessionActive) {
             socket.emit('stop_audio');
+            setIsSessionActive(false);
         } else {
             socket.emit('start_audio');
+            setIsSessionActive(true);
         }
     };
 
