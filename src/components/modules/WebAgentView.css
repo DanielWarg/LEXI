@@ -8,10 +8,10 @@
     overflow: hidden;
 }
 
-/* Browser viewport - takes all available space above terminal */
+/* Browser viewport - takes ALL remaining space above terminal */
 .agent-viewport {
-    flex: 1 1 auto;
-    min-height: 400px; /* Ensure minimum reasonable height */
+    flex: 1 1 0;
+    min-height: 0; /* Allow flex to control size */
     background: #000;
     overflow: hidden;
     position: relative;
@@ -55,18 +55,25 @@
     opacity: 0.6;
 }
 
-/* Terminal Section - fixed height at bottom */
+/* Terminal Section - FIXED height at bottom, never grows */
 .agent-terminal {
-    flex: 0 0 140px; /* Fixed 140px height */
+    flex: 0 0 140px;
+    height: 140px;
+    max-height: 140px;
+    min-height: 140px;
     background: var(--bg-panel);
     border-top: 1px solid var(--border-subtle);
     display: flex;
     flex-direction: column;
+    overflow: hidden;
 }
 
 .terminal-logs {
     flex: 1;
+    height: 100px;
+    max-height: 100px;
     overflow-y: auto;
+    overflow-x: hidden;
     padding: 8px 12px;
     font-family: 'JetBrains Mono', monospace;
     font-size: 0.75rem;
