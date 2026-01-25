@@ -1,37 +1,23 @@
-/* WebAgentView - Standalone module for browser automation */
+/* WebAgentView - Full-screen browser preview */
 .web-agent-view {
     width: 100%;
     height: 100%;
+    background: #000;
     display: flex;
-    flex-direction: column;
-    background: #0a0a0a;
+    align-items: center;
+    justify-content: center;
     overflow: hidden;
 }
 
-/* Browser viewport - takes ALL remaining space above terminal */
-.agent-viewport {
-    flex: 1 1 0;
-    min-height: 0; /* Allow flex to control size */
-    background: #000;
-    overflow: hidden;
-    position: relative;
-}
-
-/* Browser image fills the viewport container */
+/* Browser image - scales to fit viewport */
 .browser-image {
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    object-fit: contain; /* Maintain aspect ratio within bounds */
-    background: #000;
+    max-width: 100%;
+    max-height: 100%;
+    object-fit: contain;
 }
 
 /* Empty state when no browser frame */
 .empty-browser-state {
-    position: absolute;
-    inset: 0;
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -53,85 +39,4 @@
 .sub-text {
     font-size: 0.8rem;
     opacity: 0.6;
-}
-
-/* Terminal Section - FIXED height at bottom, never grows */
-.agent-terminal {
-    flex: 0 0 140px;
-    height: 140px;
-    max-height: 140px;
-    min-height: 140px;
-    background: var(--bg-panel);
-    border-top: 1px solid var(--border-subtle);
-    display: flex;
-    flex-direction: column;
-    overflow: hidden;
-}
-
-.terminal-logs {
-    flex: 1;
-    height: 100px;
-    max-height: 100px;
-    overflow-y: auto;
-    overflow-x: hidden;
-    padding: 8px 12px;
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 0.75rem;
-    color: var(--text-muted);
-}
-
-.log-placeholder {
-    opacity: 0.4;
-    font-style: italic;
-}
-
-.log-line {
-    margin-bottom: 2px;
-    word-break: break-all;
-}
-
-.log-time {
-    color: var(--color-cyan-dim);
-    margin-right: 8px;
-    font-size: 0.65rem;
-}
-
-.terminal-input-row {
-    flex: 0 0 40px;
-    background: rgba(0, 0, 0, 0.3);
-    display: flex;
-    align-items: center;
-    padding: 0 12px;
-    gap: 10px;
-    border-top: 1px solid var(--border-subtle);
-}
-
-.terminal-icon {
-    color: var(--color-cyan);
-    flex-shrink: 0;
-}
-
-.terminal-input-row input {
-    flex: 1;
-    background: transparent;
-    border: none;
-    color: var(--text-main);
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 0.85rem;
-    outline: none;
-}
-
-.send-cmd-btn {
-    background: transparent;
-    border: none;
-    color: var(--color-cyan);
-    cursor: pointer;
-    padding: 6px;
-    border-radius: 4px;
-    transition: background 0.2s;
-    flex-shrink: 0;
-}
-
-.send-cmd-btn:hover {
-    background: rgba(0, 243, 255, 0.1);
 }

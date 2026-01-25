@@ -1,5 +1,6 @@
 import React from 'react';
 import { CadToolContext } from './CadToolContext';
+import { WebToolContext } from './WebToolContext';
 import './ToolMenu.css';
 
 interface ToolMenuProps {
@@ -13,13 +14,7 @@ export const ToolMenu: React.FC<ToolMenuProps> = ({ activeTool = 'home' }) => {
             case 'cad':
                 return <CadToolContext />;
             case 'web':
-                return (
-                    <div className="context-info">
-                        <p className="context-label">Active Module:</p>
-                        <p className="context-value">WEB AGENT</p>
-                        <p className="context-hint">Browser automation in progress.</p>
-                    </div>
-                );
+                return <WebToolContext />;
             case 'printer':
                 return (
                     <div className="context-info">
