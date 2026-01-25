@@ -8,11 +8,18 @@ import { CameraView } from '../modules/CameraView';
 import { FilesView } from '../modules/FilesView';
 import './CentralCanvas.css';
 
-interface CentralCanvasProps {
-    activeTool?: string;
+interface CadData {
+    format?: string;
+    data?: string;
+    filename?: string;
 }
 
-export const CentralCanvas: React.FC<CentralCanvasProps> = ({ activeTool = 'home' }) => {
+interface CentralCanvasProps {
+    activeTool?: string;
+    cadData?: CadData | null;
+}
+
+export const CentralCanvas: React.FC<CentralCanvasProps> = ({ activeTool = 'home', cadData }) => {
     return (
         <div className="central-canvas">
             {/* Home State */}
@@ -59,7 +66,7 @@ export const CentralCanvas: React.FC<CentralCanvasProps> = ({ activeTool = 'home
             {/* CAD / 3D Design */}
             {activeTool === 'cad' && (
                 <div className="active-tool-container">
-                    <CadView />
+                    <CadView initialData={cadData} />
                 </div>
             )}
 

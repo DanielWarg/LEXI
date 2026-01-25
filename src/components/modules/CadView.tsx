@@ -39,15 +39,28 @@ const LoadingCube: React.FC = () => {
     );
 };
 
-export const CadView: React.FC = () => {
-    const { socket } = useSocket();
-    const [cadData, setCadData] = useState<CadData | null>(null);
+interface CadViewProps {
+    initialData?: CadData | null;
+}
 
+export const CadView: React.FC<CadViewProps> = ({ initialData }) => {
+    const { socket } = useSocket();
+    const [cadData, setCadData] = useState<CadData | null>(initialData || null);
+
+    // Sync with initialData prop when it changes
+    useEffect(() => {
+        if (initialData) {
+            console.log('[CadView] Received initialData:', initialData.format);
+            setCadData(initialData);
+        }
+    }, [initialData]);
+
+    // Also listen for socket events for future updates
     useEffect(() => {
         if (!socket) return;
 
         const handleCadData = (data: CadData) => {
-            console.log('[CadView] Received CAD data:', data.format);
+            console.log('[CadView] Received CAD data via socket:', data.format);
             setCadData(data);
         };
 

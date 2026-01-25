@@ -55,6 +55,7 @@ audio_loop = None
 loop_task = None
 authenticator = None
 kasa_agent = KasaAgent()
+
 SETTINGS_FILE = "settings.json"
 
 DEFAULT_SETTINGS = {
@@ -123,7 +124,7 @@ async def startup_event():
 
     print("[SERVER] Startup: Initializing Kasa Agent...")
     await kasa_agent.initialize()
-    
+
     # Auto-start Lexi on startup
     print("[SERVER] Startup: Initializing Lexi...")
     await initialize_lexi(
@@ -812,77 +813,70 @@ async def discover_kasa(sid):
 
 @sio.event
 async def iterate_cad(sid, data):
-    # data: { prompt: "make it bigger" }
     prompt = data.get('prompt')
-    print(f"Received iterate_cad request: '{prompt}'")
-    
+    print(f"[SERVER] Received iterate_cad: '{prompt}'")
+
     if not audio_loop or not audio_loop.cad_agent:
-        await sio.emit('error', {'msg': "CAD Agent not available"})
+        await sio.emit('error', {'msg': "CAD Agent not available - start Lexi session first"})
         return
 
     try:
-        # Notify user work has started
-        await sio.emit('status', {'msg': 'Iterating design...'})
+        await sio.emit('activate_tool_view', {'tool': 'cad'})
         await sio.emit('cad_status', {'status': 'generating'})
-        
-        # Call the agent with project path
+
         cad_output_dir = str(audio_loop.project_manager.get_current_project_path() / "cad")
         result = await audio_loop.cad_agent.iterate_prototype(prompt, output_dir=cad_output_dir)
-        
+
         if result:
-            info = f"{len(result.get('data', ''))} bytes (STL)"
-            print(f"Sending updated CAD data: {info}")
+            print(f"[SERVER] Sending updated CAD data: {len(result.get('data', ''))} bytes")
             await sio.emit('cad_data', result)
-            # Save to Project
+
             if 'file_path' in result:
-                saved_path = audio_loop.project_manager.save_cad_artifact(result['file_path'], prompt)
-                if saved_path:
-                    print(f"[SERVER] Saved iterated CAD to {saved_path}")
+                audio_loop.project_manager.save_cad_artifact(result['file_path'], prompt)
 
             await sio.emit('status', {'msg': 'Design updated'})
         else:
             await sio.emit('error', {'msg': 'Failed to update design'})
-            
+            await sio.emit('cad_status', {'status': 'failed'})
+
     except Exception as e:
-        print(f"Error iterating CAD: {e}")
+        print(f"[SERVER] Error iterating CAD: {e}")
+        import traceback
+        traceback.print_exc()
         await sio.emit('error', {'msg': f"Iteration Error: {str(e)}"})
 
 @sio.event
 async def generate_cad(sid, data):
-    # data: { prompt: "make a cube" }
     prompt = data.get('prompt')
-    print(f"Received generate_cad request: '{prompt}'")
-    
+    print(f"[SERVER] Received generate_cad: '{prompt}'")
+
     if not audio_loop or not audio_loop.cad_agent:
-        await sio.emit('error', {'msg': "CAD Agent not available"})
+        await sio.emit('error', {'msg': "CAD Agent not available - start Lexi session first"})
         return
 
     try:
-        await sio.emit('status', {'msg': 'Generating new design...'})
+        await sio.emit('activate_tool_view', {'tool': 'cad'})
         await sio.emit('cad_status', {'status': 'generating'})
-        
-        # Use generate_prototype based on prompt with project path
+
         cad_output_dir = str(audio_loop.project_manager.get_current_project_path() / "cad")
         result = await audio_loop.cad_agent.generate_prototype(prompt, output_dir=cad_output_dir)
-        
+
         if result:
-            info = f"{len(result.get('data', ''))} bytes (STL)"
-            print(f"Sending newly generated CAD data: {info}")
+            print(f"[SERVER] Sending CAD data: {len(result.get('data', ''))} bytes")
             await sio.emit('cad_data', result)
 
-
-            # Save to Project
             if 'file_path' in result:
-                saved_path = audio_loop.project_manager.save_cad_artifact(result['file_path'], prompt)
-                if saved_path:
-                    print(f"[SERVER] Saved generated CAD to {saved_path}")
+                audio_loop.project_manager.save_cad_artifact(result['file_path'], prompt)
 
             await sio.emit('status', {'msg': 'Design generated'})
         else:
             await sio.emit('error', {'msg': 'Failed to generate design'})
-            
+            await sio.emit('cad_status', {'status': 'failed'})
+
     except Exception as e:
-        print(f"Error generating CAD: {e}")
+        print(f"[SERVER] Error generating CAD: {e}")
+        import traceback
+        traceback.print_exc()
         await sio.emit('error', {'msg': f"Generation Error: {str(e)}"})
 
 @sio.event

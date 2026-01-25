@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { VoiceWidget } from '../voice/VoiceWidget';
 import { CentralCanvas } from '../workspace/CentralCanvas';
 import { ToolMenu } from '../tools/ToolMenu';
@@ -6,9 +6,18 @@ import { DockBar } from '../tools/DockBar';
 import { useSocket } from '../../context/SocketContext';
 import './MainLayout.css';
 
+interface CadData {
+  format?: string;
+  data?: string;
+  filename?: string;
+}
+
 export const MainLayout: React.FC = () => {
   const { socket } = useSocket();
-  const [activeTool, setActiveTool] = React.useState('home');
+  const [activeTool, setActiveTool] = useState('home');
+  // Store CAD data at this level to avoid race condition
+  const [cadData, setCadData] = useState<CadData | null>(null);
+  const cadDataRef = useRef<CadData | null>(null);
 
   const handleSelectTool = (tool: string) => {
     setActiveTool(prev => prev === tool ? 'home' : tool);
@@ -25,23 +34,21 @@ export const MainLayout: React.FC = () => {
 
     // Auto-switch to web view when browser frames arrive
     const handleBrowserFrame = () => {
-      if (activeTool !== 'web') {
-        console.log('[MainLayout] Browser frame received, switching to web view');
-        setActiveTool('web');
-      }
+      setActiveTool(prev => prev !== 'web' ? 'web' : prev);
     };
 
-    // Auto-switch to cad view when CAD data/status arrives
-    const handleCadData = () => {
-      if (activeTool !== 'cad') {
-        console.log('[MainLayout] CAD data received, switching to cad view');
-        setActiveTool('cad');
-      }
+    // Store CAD data AND switch view
+    const handleCadData = (data: CadData) => {
+      console.log('[MainLayout] CAD data received:', data.format, data.data?.length, 'chars');
+      setCadData(data);
+      cadDataRef.current = data;
+      setActiveTool('cad');
     };
 
     const handleCadStatus = (data: { status: string }) => {
-      if (data.status === 'generating' && activeTool !== 'cad') {
+      if (data.status === 'generating') {
         console.log('[MainLayout] CAD generating, switching to cad view');
+        setCadData({ format: 'loading' });
         setActiveTool('cad');
       }
     };
@@ -57,7 +64,7 @@ export const MainLayout: React.FC = () => {
       socket.off('cad_data', handleCadData);
       socket.off('cad_status', handleCadStatus);
     };
-  }, [socket, activeTool]);
+  }, [socket]);
 
   return (
     <div className="layout-container">
@@ -69,7 +76,7 @@ export const MainLayout: React.FC = () => {
 
       {/* Main Workspace Area (The "Box" to the right) */}
       <main className="main-workspace">
-        <CentralCanvas activeTool={activeTool} />
+        <CentralCanvas activeTool={activeTool} cadData={cadData} />
 
         {/* Floating Dock ToolBar */}
         <div className="workspace-dock-container">

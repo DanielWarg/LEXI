@@ -70,8 +70,19 @@ export const CadToolContext: React.FC = () => {
     }, [socket]);
 
     const handleGenerate = () => {
-        if (!socket || !prompt.trim()) return;
+        if (!socket) {
+            console.error('[CadToolContext] No socket connection!');
+            return;
+        }
+        if (!prompt.trim()) {
+            console.warn('[CadToolContext] Empty prompt, not sending');
+            return;
+        }
+        console.log('[CadToolContext] === EMITTING generate_cad ===');
+        console.log('[CadToolContext] Socket connected:', socket.connected);
+        console.log('[CadToolContext] Prompt:', prompt);
         setIsSending(true);
+        setIsGenerating(true);
         socket.emit('generate_cad', { prompt });
         setPrompt('');
     };

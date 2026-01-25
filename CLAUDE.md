@@ -57,7 +57,7 @@ Socket.IO bridges Python backend (port 8000) ↔ React frontend for real-time au
 
 ### Agent Pattern
 Each capability is a Python class in `backend/`:
-- `cad_agent.py` - CAD generation (build123d)
+- `cad_agent.py` - CAD generation (build123d + Gemini 3 Pro for code gen)
 - `web_agent.py` - Browser automation (Playwright)
 - `printer_agent.py` - 3D printer control (OctoPrint/Moonraker/PrusaLink)
 - `kasa_agent.py` - Smart home (TP-Link Kasa)
@@ -87,8 +87,12 @@ When adding or removing features, follow this order to avoid black screen:
 - `start_audio` / `stop_audio` - Activate/deactivate Lexi
 - `status` - Session state updates
 - `transcription` - Voice transcripts
-- `web_frame` - Browser screenshots
+- `browser_frame` - Browser screenshots
 - `tool_confirmation` - Permission prompts
+- `activate_tool_view` - Switch to specific tool view
+- `cad_data` - STL model data (base64 encoded)
+- `cad_status` - CAD generation status (generating/failed)
+- `cad_thought` - Streaming thoughts from CAD agent
 
 ### Project Context
 - Default project: `projects/temp/` (cleared on startup)
@@ -108,6 +112,16 @@ When adding or removing features, follow this order to avoid black screen:
 
 ### Auto-Open Behavior
 Tools auto-open when their data arrives via socket events. `MainLayout.tsx` listens for events like `browser_frame`, `cad_data`, `cad_status`. When data arrives, it sets `activeTool` to switch to the appropriate view.
+
+**Race Condition Pattern**: For tools that send data simultaneously with view activation, store the data in `MainLayout.tsx` and pass it as a prop through `CentralCanvas.tsx` to the view component. This ensures data is available immediately when the component mounts, avoiding the race condition where socket events arrive before the component is listening. See `cadData` flow for reference implementation.
+
+### CAD Tool Integration
+The CAD tool uses a NON_BLOCKING pattern:
+1. Gemini calls `generate_cad` tool → `lexi.py` creates background task via `asyncio.create_task()`
+2. **No function_response is sent** - the model already acknowledged the request
+3. `CadAgent` generates STL using build123d + Gemini 3 Pro for code generation
+4. On completion, `on_cad_data` callback sends data to frontend via socket
+5. Completion notification sent to Gemini session so Lexi can announce success
 
 ## Code Style
 

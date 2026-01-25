@@ -532,7 +532,17 @@ class AudioLoop:
                 await asyncio.sleep(0.1)
 
     async def handle_cad_request(self, prompt):
-        print(f"[LEXI DEBUG] [CAD] Background Task Started: handle_cad_request('{prompt}')")
+        print(f"[LEXI] ========================================")
+        print(f"[LEXI] [CAD] handle_cad_request ENTERED")
+        print(f"[LEXI] [CAD] Prompt: '{prompt}'")
+        print(f"[LEXI] [CAD] cad_agent exists: {self.cad_agent is not None}")
+        print(f"[LEXI] ========================================")
+
+        # Activate CAD view in UI
+        if self.on_tool_activate:
+            print(f"[LEXI] Activating tool view: cad")
+            self.on_tool_activate('cad')
+
         if self.on_cad_status:
             self.on_cad_status("generating")
             
@@ -556,10 +566,19 @@ class AudioLoop:
 
         # Get project cad folder path
         cad_output_dir = str(self.project_manager.get_current_project_path() / "cad")
-        
+        print(f"[LEXI] [CAD] Output dir: {cad_output_dir}")
+
         # Call the secondary agent with project path
-        cad_data = await self.cad_agent.generate_prototype(prompt, output_dir=cad_output_dir)
-        
+        try:
+            print(f"[LEXI] [CAD] Calling cad_agent.generate_prototype...")
+            cad_data = await self.cad_agent.generate_prototype(prompt, output_dir=cad_output_dir)
+            print(f"[LEXI] [CAD] generate_prototype returned: {cad_data is not None}")
+        except Exception as e:
+            print(f"[LEXI] [CAD] ERROR in generate_prototype: {e}")
+            import traceback
+            traceback.print_exc()
+            cad_data = None
+
         if cad_data:
             print(f"[LEXI DEBUG] [OK] CadAgent returned data successfully.")
             print(f"[LEXI DEBUG] [INFO] Data Check: {len(cad_data.get('vertices', []))} vertices, {len(cad_data.get('edges', []))} edges.")
@@ -785,9 +804,11 @@ class AudioLoop:
 
                     # 3. Handle Tool Calls
                     if response.tool_call:
-                        print("The tool was called")
+                        print(f"[LEXI] === TOOL CALL DETECTED ===")
+                        print(f"[LEXI] Function calls: {[fc.name for fc in response.tool_call.function_calls]}")
                         function_responses = []
                         for fc in response.tool_call.function_calls:
+                            print(f"[LEXI] Processing tool: {fc.name} with args: {fc.args}")
                             if fc.name in ["generate_cad", "run_web_agent", "write_file", "read_directory", "read_file", "create_project", "switch_project", "list_projects", "list_smart_devices", "control_light", "discover_printers", "print_stl", "get_print_status", "iterate_cad"]:
                                 prompt = fc.args.get("prompt", "") # Prompt is not present for all tools
                                 
@@ -848,14 +869,15 @@ class AudioLoop:
                                         continue
 
                                 # If confirmed (or no callback configured, or auto-allowed), proceed
+                                print(f"[LEXI] === EXECUTING TOOL: {fc.name} ===")
                                 if fc.name == "generate_cad":
                                     print(f"\n[LEXI] --------------------------------------------------")
                                     print(f"[LEXI] [TOOL] Tool Call Detected: 'generate_cad'")
                                     print(f"[LEXI] [IN] Arguments: prompt='{prompt}'")
-                                    
+
                                     asyncio.create_task(self.handle_cad_request(prompt))
                                     # No function response needed - model already acknowledged when user asked
-                                
+
                                 elif fc.name == "run_web_agent":
                                     print(f"[LEXI] [TOOL] Tool Call: 'run_web_agent' with prompt='{prompt}'")
                                     asyncio.create_task(self.handle_web_agent_request(prompt))
