@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useSocket } from '../../context/SocketContext';
-import { Mic, Speaker, Camera, Shield, FileText } from 'lucide-react';
+import { Mic, Shield } from 'lucide-react';
 import './SettingsView.css';
 
 const TOOLS = [

@@ -35,7 +35,7 @@ export const WebAgentView: React.FC = () => {
     useEffect(() => {
         if (!viewportRef.current) return;
 
-        let timeoutId: NodeJS.Timeout;
+        let timeoutId: ReturnType<typeof setTimeout>;
 
         timeoutId = setTimeout(() => {
             sendCanvasSize();
