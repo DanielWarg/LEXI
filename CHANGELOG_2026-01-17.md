@@ -1,12 +1,12 @@
 # Changelog 2026-01-17
 
 ## Sammanfattning
-Idag har fokus varit på att städa upp projektet, optimera prestanda och byta identitet från A.D.A till Lexi. Vi har också genomfört en "Safe Clean" av CAD-agenten.
+Idag har fokus varit på att städa upp projektet och optimera prestanda. Vi har också genomfört en "Safe Clean" av CAD-agenten.
 
 ### 🧹 Code Cleanup & Safety
 *   **Safe CAD Removal:**
     *   Successfully removed `cad_agent.py`, `temp_cad_gen.py`, `verify_cad.py` after disabling backend logic first to prevent audio crashes.
-    *   Updated `ada.py` and `server.py` to stub out CAD endpoints.
+    *   Updated `lexi.py` and `server.py` to stub out CAD endpoints.
     *   **Tag:** `stable-voice-restore-point` created before this cleanup.
 *   **Documentation:**
     *   Removed obsolete plan files (`cad_removal_plan.md`, `gesture_removal_notes.md`).
@@ -20,7 +20,7 @@ Idag har fokus varit på att städa upp projektet, optimera prestanda och byta i
     *   Implementerat "Lexi Tänkpartner"-persona fullt ut.
     *   Lagt till "Ninja-psykologi™"-instruktioner: Fånga intuition, bekräfta mönster, ingen meta-kommentar.
     *   Tonalitet: Varm, kvick "Michelin-stjärna i organisationspsykologi" (inspirerad av "Dagens Meny"-metaforer).
-*   **Nytt Namn:** Lexi (ersätter A.D.A).
+*   **Namn:** Lexi.
 *   **UI:** Uppdaterat alla synliga texter till "Lexi".
 
 

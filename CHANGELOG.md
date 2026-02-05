@@ -3,15 +3,13 @@
 ## [Unreleased] - 2026-01-25
 
 ### 🚀 New Features
-- **Identity Change:** Formally renamed the assistant from **Ada** to **Lexi** across the entire codebase, including file names, logs, and system prompts.
 - **Swedish Language Lock:** Implemented a robust Swedish-only communication policy.
 - **Phonetic Heuristics:** Added logic to correctly interpret common transcription errors (e.g., "Heller ikke") as "Hej Lexi".
 
 ### 🛠️ Improvements
 - **Language Consistency:** Translated all 15+ tool descriptions and system notifications to Swedish to prevent "context contamination" and maintain a consistent persona.
-- **Natural Interaction:** Refined system instructions to reduce the frequency of using the user's name ("Ann-Christin") and adopt a more natural "partner" tone.
-- **File Renaming:** Renamed `backend/ada.py` to `backend/lexi.py` and updated all internal imports.
-- **Tests:** Updated and verified all backend tool tests under the new Lexi naming convention.
+- **Natural Interaction:** Refined system instructions to reduce the frequency of using the user's name and adopt a more natural "partner" tone.
+- **Tests:** Updated and verified all backend tool tests.
 
 ---
 

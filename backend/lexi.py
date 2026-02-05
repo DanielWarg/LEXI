@@ -301,7 +301,7 @@ class AudioLoop:
         self._is_speaking = False
         self._silence_start_time = None
         
-        # Echo Cancellation: Track when A.D.A is speaking to drop mic input
+        # Echo Cancellation: Track when Lexi is speaking to drop mic input
         self.is_speaking = False
         
         # Initialize ProjectManager
