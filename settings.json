@@ -8,12 +8,18 @@
         "read_file": true,
         "create_project": true,
         "switch_project": true,
-        "list_projects": true
+        "list_projects": true,
+        "send_to_openclaw": true
     },
     "printers": [],
     "kasa_devices": [],
     "camera_flipped": false,
     "video_device_index": 1,
     "input_device_index": 1,
-    "output_device_index": 3
+    "output_device_index": 3,
+    "openclaw": {
+        "base_url": "https://***REMOVED***",
+        "token": "***REMOVED***",
+        "model": "sonnet"
+    }
 }

@@ -68,11 +68,17 @@ DEFAULT_SETTINGS = {
         "read_file": True,
         "create_project": True,
         "switch_project": True,
-        "list_projects": True
+        "list_projects": True,
+        "send_to_openclaw": True
     },
     "printers": [], # List of {host, port, name, type}
     "kasa_devices": [], # List of {ip, alias, model}
-    "camera_flipped": False # Invert cursor horizontal direction
+    "camera_flipped": False, # Invert cursor horizontal direction
+    "openclaw": {
+        "base_url": "",  # e.g., "https://***REMOVED***"
+        "token": "",
+        "model": "sonnet"
+    }
 }
 
 SETTINGS = DEFAULT_SETTINGS.copy()
@@ -236,7 +242,13 @@ async def initialize_lexi(device_index=None, output_device_index=None, device_na
 
         # Apply current permissions
         audio_loop.update_permissions(SETTINGS["tool_permissions"])
-        
+
+        # Apply OpenClaw configuration if set
+        oc = SETTINGS.get("openclaw", {})
+        if oc.get("base_url"):
+            audio_loop.configure_openclaw(oc.get("base_url", ""), oc.get("token", ""), oc.get("model", "sonnet"))
+            print(f"[SERVER] OpenClaw configured: {oc.get('base_url')}")
+
         # Start paused by default on startup if not overridden, or if muted requested
         # Actually, for chat to work, we need the session.
         # But for mic, we might want it paused. 
@@ -1193,6 +1205,14 @@ async def update_settings(sid, data):
     if "camera_flipped" in data:
         SETTINGS["camera_flipped"] = data["camera_flipped"]
         print(f"[SERVER] Camera flip set to: {data['camera_flipped']}")
+
+    if "openclaw" in data:
+        SETTINGS["openclaw"].update(data["openclaw"])
+        print(f"[SERVER] OpenClaw settings updated: {SETTINGS['openclaw']}")
+        # Apply to audio_loop if running
+        if audio_loop:
+            oc = SETTINGS["openclaw"]
+            audio_loop.configure_openclaw(oc.get("base_url", ""), oc.get("token", ""), oc.get("model", "sonnet"))
 
     save_settings()
     # Broadcast new full settings
