@@ -4,6 +4,8 @@
     gap: 20px;
     padding: 24px;
     height: 100%;
+    overflow: hidden;
+    box-sizing: border-box;
 }
 
 .view-header {
@@ -110,6 +112,8 @@
     flex-direction: column;
     gap: 12px;
     overflow-y: auto;
+    overscroll-behavior: contain;
+    min-height: 0;
 }
 
 .empty-state {

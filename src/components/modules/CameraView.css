@@ -4,6 +4,8 @@
     gap: 20px;
     padding: 24px;
     height: 100%;
+    overflow: hidden;
+    box-sizing: border-box;
 }
 
 .camera-container {

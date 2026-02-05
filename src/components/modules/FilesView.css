@@ -4,6 +4,8 @@
     gap: 16px;
     padding: 24px;
     height: 100%;
+    overflow: hidden;
+    box-sizing: border-box;
 }
 
 .project-badge {
@@ -54,6 +56,8 @@
     flex-direction: column;
     gap: 4px;
     overflow-y: auto;
+    overscroll-behavior: contain;
+    min-height: 0;
 }
 
 .file-item {

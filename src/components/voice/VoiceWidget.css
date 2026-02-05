@@ -80,6 +80,7 @@
 .transcript-area {
     height: 300px;
     overflow-y: auto;
+    overscroll-behavior: contain;
     display: flex;
     flex-direction: column;
     gap: 8px;

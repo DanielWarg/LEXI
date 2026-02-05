@@ -352,37 +352,37 @@ async def connect(sid, environ):
         await sio.emit('status', {'msg': 'Lexi Started'}, room=sid)
 
     global authenticator
-    
-    # Callback for Auth Status
-    async def on_auth_status(is_auth):
-        print(f"[SERVER] Auth status change: {is_auth}")
-        await sio.emit('auth_status', {'authenticated': is_auth})
 
-    # Callback for Auth Camera Frames
-    async def on_auth_frame(frame_b64):
-        await sio.emit('auth_frame', {'image': frame_b64})
+    # Check Settings for Auth - only create authenticator if enabled
+    if SETTINGS.get("face_auth_enabled", False):
+        # Callback for Auth Status
+        async def on_auth_status(is_auth):
+            print(f"[SERVER] Auth status change: {is_auth}")
+            await sio.emit('auth_status', {'authenticated': is_auth})
 
-    # Initialize Authenticator if not already done
-    if authenticator is None:
-        authenticator = FaceAuthenticator(
-            reference_image_path="reference.jpg",
-            on_status_change=on_auth_status,
-            on_frame=on_auth_frame
-        )
-    
-    # Check if already authenticated or needs to start
-    if authenticator.authenticated:
-        await sio.emit('auth_status', {'authenticated': True})
-    else:
-        # Check Settings for Auth
-        if SETTINGS.get("face_auth_enabled", False):
+        # Callback for Auth Camera Frames
+        async def on_auth_frame(frame_b64):
+            await sio.emit('auth_frame', {'image': frame_b64})
+
+        # Initialize Authenticator if not already done
+        if authenticator is None:
+            authenticator = FaceAuthenticator(
+                reference_image_path="reference.jpg",
+                on_status_change=on_auth_status,
+                on_frame=on_auth_frame
+            )
+
+        # Check if already authenticated or needs to start
+        if authenticator.authenticated:
+            await sio.emit('auth_status', {'authenticated': True})
+        else:
             await sio.emit('auth_status', {'authenticated': False})
             # Start the auth loop in background
             asyncio.create_task(authenticator.start_authentication_loop())
-        else:
-            # Bypass Auth
-            print("Face Auth Disabled. Auto-authenticating.")
-            await sio.emit('auth_status', {'authenticated': True})
+    else:
+        # Bypass Auth - face auth disabled
+        print("[SERVER] Face Auth Disabled. Auto-authenticating.")
+        await sio.emit('auth_status', {'authenticated': True})
             
     # Try to ensure Lexi is running if it crashed or wasn't started
     if not audio_loop:

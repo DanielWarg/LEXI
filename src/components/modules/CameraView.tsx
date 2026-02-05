@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Camera, Video, VideoOff, RotateCw, Maximize2 } from 'lucide-react';
+import { Camera, Video, VideoOff } from 'lucide-react';
 import { useSocket } from '../../context/SocketContext';
 import './CameraView.css';
 
@@ -8,41 +8,69 @@ export const CameraView: React.FC = () => {
     const videoRef = useRef<HTMLVideoElement>(null);
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const [isStreaming, setIsStreaming] = useState(false);
-    const [stream, setStream] = useState<MediaStream | null>(null);
+    const [hasVideo, setHasVideo] = useState(false);
+    const streamRef = useRef<MediaStream | null>(null);
     const intervalRef = useRef<NodeJS.Timeout | null>(null);
 
     const startCamera = async () => {
         try {
+            console.log('[CameraView] Requesting camera access...');
             const mediaStream = await navigator.mediaDevices.getUserMedia({
-                video: { facingMode: 'user', width: 640, height: 480 }
+                video: {
+                    facingMode: 'user',
+                    width: { ideal: 640 },
+                    height: { ideal: 480 }
+                }
             });
 
-            if (videoRef.current) {
-                videoRef.current.srcObject = mediaStream;
-            }
-            setStream(mediaStream);
+            console.log('[CameraView] Got media stream:', mediaStream.getVideoTracks());
+            streamRef.current = mediaStream;
             setIsStreaming(true);
 
-            // Start sending frames to backend
-            intervalRef.current = setInterval(() => {
-                captureAndSendFrame();
-            }, 500); // Send 2 frames per second
-
         } catch (err) {
-            console.error('Failed to access camera:', err);
+            console.error('[CameraView] Failed to access camera:', err);
         }
     };
 
+    // Set srcObject when stream changes and video element is available
+    useEffect(() => {
+        if (isStreaming && streamRef.current && videoRef.current) {
+            console.log('[CameraView] Setting srcObject on video element');
+            videoRef.current.srcObject = streamRef.current;
+
+            // Start sending frames after video is playing
+            videoRef.current.onloadedmetadata = () => {
+                console.log('[CameraView] Video metadata loaded');
+                videoRef.current?.play().then(() => {
+                    console.log('[CameraView] Video playing');
+                    setHasVideo(true);
+
+                    // Start sending frames to backend
+                    if (intervalRef.current) clearInterval(intervalRef.current);
+                    intervalRef.current = setInterval(() => {
+                        captureAndSendFrame();
+                    }, 500); // Send 2 frames per second
+                }).catch(err => {
+                    console.error('[CameraView] Failed to play video:', err);
+                });
+            };
+        }
+    }, [isStreaming]);
+
     const stopCamera = () => {
-        if (stream) {
-            stream.getTracks().forEach(track => track.stop());
-            setStream(null);
+        if (streamRef.current) {
+            streamRef.current.getTracks().forEach(track => track.stop());
+            streamRef.current = null;
         }
         if (intervalRef.current) {
             clearInterval(intervalRef.current);
             intervalRef.current = null;
         }
+        if (videoRef.current) {
+            videoRef.current.srcObject = null;
+        }
         setIsStreaming(false);
+        setHasVideo(false);
     };
 
     const captureAndSendFrame = () => {
@@ -52,7 +80,7 @@ export const CameraView: React.FC = () => {
         const canvas = canvasRef.current;
         const ctx = canvas.getContext('2d');
 
-        if (!ctx) return;
+        if (!ctx || video.videoWidth === 0 || video.videoHeight === 0) return;
 
         canvas.width = video.videoWidth;
         canvas.height = video.videoHeight;
@@ -101,19 +129,26 @@ export const CameraView: React.FC = () => {
             </div>
 
             <div className="camera-container">
-                {isStreaming ? (
-                    <video
-                        ref={videoRef}
-                        autoPlay
-                        playsInline
-                        muted
-                        className="camera-feed"
-                    />
-                ) : (
+                {/* Always render video element, but show/hide based on state */}
+                <video
+                    ref={videoRef}
+                    autoPlay
+                    playsInline
+                    muted
+                    className="camera-feed"
+                    style={{ display: isStreaming && hasVideo ? 'block' : 'none' }}
+                />
+
+                {/* Show placeholder when not streaming or no video yet */}
+                {(!isStreaming || !hasVideo) && (
                     <div className="camera-placeholder">
                         <Camera size={64} className="placeholder-icon" />
-                        <p>Camera is off</p>
-                        <span>Click "Start Camera" to enable video feed to Lexi</span>
+                        <p>{isStreaming ? 'Loading camera...' : 'Camera is off'}</p>
+                        <span>
+                            {isStreaming
+                                ? 'Waiting for video feed...'
+                                : 'Click "Start Camera" to enable video feed to Lexi'}
+                        </span>
                     </div>
                 )}
             </div>
@@ -121,7 +156,7 @@ export const CameraView: React.FC = () => {
             {/* Hidden canvas for frame capture */}
             <canvas ref={canvasRef} style={{ display: 'none' }} />
 
-            {isStreaming && (
+            {isStreaming && hasVideo && (
                 <div className="camera-status">
                     <div className="status-dot live"></div>
                     <span>Streaming to Lexi • 2 FPS</span>
