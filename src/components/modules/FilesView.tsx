@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { FolderOpen, File, ChevronRight, Upload, Download, Trash2 } from 'lucide-react';
+import { FolderOpen, File, ChevronRight } from 'lucide-react';
 import { useSocket } from '../../context/SocketContext';
 import './FilesView.css';
 
@@ -11,9 +11,9 @@ interface FileItem {
 }
 
 export const FilesView: React.FC = () => {
-    const { socket, connected } = useSocket();
+    const { socket } = useSocket();
     const [currentProject, setCurrentProject] = useState<string>('Default');
-    const [files, setFiles] = useState<FileItem[]>([]);
+    const [files] = useState<FileItem[]>([]);
     const [currentPath, setCurrentPath] = useState<string[]>([]);
 
     useEffect(() => {
@@ -36,6 +36,7 @@ export const FilesView: React.FC = () => {
         }
     };
 
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const handleBack = () => {
         setCurrentPath(prev => prev.slice(0, -1));
     };

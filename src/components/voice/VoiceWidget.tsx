@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Mic, MicOff, Send, MoreHorizontal, Power } from 'lucide-react';
+import { Mic, MicOff, Send } from 'lucide-react';
 import './VoiceWidget.css';
 import { useSocket } from '../../context/SocketContext';
 

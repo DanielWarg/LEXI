@@ -10,7 +10,7 @@ export const CameraView: React.FC = () => {
     const [isStreaming, setIsStreaming] = useState(false);
     const [hasVideo, setHasVideo] = useState(false);
     const streamRef = useRef<MediaStream | null>(null);
-    const intervalRef = useRef<NodeJS.Timeout | null>(null);
+    const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
     const startCamera = async () => {
         try {

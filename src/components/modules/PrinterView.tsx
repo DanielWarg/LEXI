@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Printer, Plus, RefreshCw, Play, Trash2, CheckCircle, AlertCircle } from 'lucide-react';
+import { Printer, Plus, RefreshCw, Play, CheckCircle, AlertCircle } from 'lucide-react';
 import { useSocket } from '../../context/SocketContext';
 import './PrinterView.css';
 

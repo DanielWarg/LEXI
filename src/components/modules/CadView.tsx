@@ -19,7 +19,7 @@ const CameraController: React.FC<{
     zoomLevel: number;
     onReady: () => void;
 }> = ({ geometry, zoomLevel, onReady }) => {
-    const { camera, gl } = useThree();
+    const { camera } = useThree();
     const controlsRef = useRef<any>(null);
     const hasInitialized = useRef(false);
 
