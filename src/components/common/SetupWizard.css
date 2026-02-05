@@ -1,0 +1,145 @@
+.setup-wizard-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.9);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 10000;
+    backdrop-filter: blur(10px);
+}
+
+.setup-wizard-modal {
+    background: linear-gradient(145deg, #1a1a2e 0%, #16213e 100%);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 24px;
+    padding: 48px;
+    max-width: 480px;
+    width: 90%;
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+}
+
+.setup-wizard-header {
+    text-align: center;
+    margin-bottom: 32px;
+}
+
+.setup-wizard-header h1 {
+    font-size: 32px;
+    font-weight: 600;
+    color: #ffffff;
+    margin: 0 0 8px 0;
+    background: linear-gradient(135deg, #00d4ff, #7c3aed);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+.setup-wizard-header p {
+    color: rgba(255, 255, 255, 0.6);
+    margin: 0;
+    font-size: 16px;
+}
+
+.setup-step {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 16px;
+    text-align: center;
+}
+
+.setup-icon {
+    color: #00d4ff;
+    margin-bottom: 8px;
+}
+
+.setup-step h2 {
+    font-size: 20px;
+    font-weight: 500;
+    color: #ffffff;
+    margin: 0;
+}
+
+.setup-description {
+    color: rgba(255, 255, 255, 0.6);
+    font-size: 14px;
+    line-height: 1.6;
+    margin: 0;
+}
+
+.setup-description a {
+    color: #00d4ff;
+    text-decoration: none;
+}
+
+.setup-description a:hover {
+    text-decoration: underline;
+}
+
+.setup-input {
+    width: 100%;
+    padding: 16px 20px;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 12px;
+    color: #ffffff;
+    font-size: 16px;
+    outline: none;
+    transition: all 0.2s;
+    margin-top: 8px;
+}
+
+.setup-input:focus {
+    border-color: #00d4ff;
+    background: rgba(255, 255, 255, 0.08);
+}
+
+.setup-input::placeholder {
+    color: rgba(255, 255, 255, 0.3);
+}
+
+.setup-button {
+    width: 100%;
+    padding: 16px 24px;
+    background: linear-gradient(135deg, #00d4ff, #7c3aed);
+    border: none;
+    border-radius: 12px;
+    color: #ffffff;
+    font-size: 16px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+    margin-top: 8px;
+}
+
+.setup-button:hover:not(:disabled) {
+    transform: translateY(-2px);
+    box-shadow: 0 10px 20px -10px rgba(0, 212, 255, 0.5);
+}
+
+.setup-button:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.setup-step.success svg {
+    color: #22c55e;
+}
+
+.setup-step.error svg {
+    color: #ef4444;
+}
+
+.spin {
+    animation: spin 1s linear infinite;
+    color: #00d4ff;
+}
+
+@keyframes spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}

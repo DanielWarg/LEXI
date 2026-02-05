@@ -1,0 +1,275 @@
+name: Build Lexi
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      release:
+        description: 'Create release'
+        required: false
+        default: false
+        type: boolean
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  build-macos:
+    runs-on: macos-14  # Apple Silicon runner
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-apple-darwin
+
+      - name: Rust cache
+        uses: swatinem/rust-cache@v2
+        with:
+          workspaces: './src-tauri -> target'
+
+      - name: Install frontend dependencies
+        run: npm ci
+
+      - name: Install Python dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install pyinstaller
+
+      - name: Build Python backend
+        run: |
+          # Create binaries directory
+          mkdir -p src-tauri/binaries
+
+          # Build with PyInstaller
+          pyinstaller --name lexi-backend \
+            --onedir \
+            --noconfirm \
+            --distpath src-tauri/binaries \
+            --hidden-import=engineio.async_drivers.aiohttp \
+            --hidden-import=socketio \
+            --hidden-import=uvicorn.logging \
+            --hidden-import=uvicorn.loops \
+            --hidden-import=uvicorn.loops.auto \
+            --hidden-import=uvicorn.protocols \
+            --hidden-import=uvicorn.protocols.http \
+            --hidden-import=uvicorn.protocols.http.auto \
+            --hidden-import=uvicorn.protocols.websockets \
+            --hidden-import=uvicorn.protocols.websockets.auto \
+            --hidden-import=uvicorn.lifespan \
+            --hidden-import=uvicorn.lifespan.on \
+            --collect-all google.genai \
+            --collect-all build123d \
+            --collect-all mediapipe \
+            --collect-all python_kasa \
+            backend/server.py
+
+          # Create Tauri sidecar wrapper (must match target triple)
+          cat > src-tauri/binaries/lexi-backend-aarch64-apple-darwin << 'WRAPPER'
+          #!/bin/bash
+          DIR="$(cd "$(dirname "$0")" && pwd)"
+          exec "$DIR/lexi-backend/lexi-backend" "$@"
+          WRAPPER
+          chmod +x src-tauri/binaries/lexi-backend-aarch64-apple-darwin
+
+          # Verify
+          ls -la src-tauri/binaries/
+
+      - name: Configure Tauri for sidecar
+        run: |
+          # Add shell plugin to Cargo.toml
+          sed -i '' 's/# tauri-plugin-shell/tauri-plugin-shell/' src-tauri/Cargo.toml
+
+          # Update tauri.conf.json with sidecar config
+          cat > src-tauri/tauri.conf.json << 'CONF'
+          {
+            "$schema": "../node_modules/@tauri-apps/cli/config.schema.json",
+            "productName": "Lexi",
+            "version": "0.1.0",
+            "identifier": "com.lexi.app",
+            "build": {
+              "frontendDist": "../dist",
+              "devUrl": "http://localhost:5173",
+              "beforeDevCommand": "npm run dev:web",
+              "beforeBuildCommand": "npm run build"
+            },
+            "app": {
+              "windows": [
+                {
+                  "title": "Lexi",
+                  "width": 1920,
+                  "height": 1080,
+                  "resizable": true,
+                  "fullscreen": false,
+                  "transparent": true,
+                  "decorations": false
+                }
+              ],
+              "security": {
+                "csp": "default-src 'self' 'unsafe-inline' 'unsafe-eval' ws://localhost:8000 http://localhost:8000 https://fonts.googleapis.com https://fonts.gstatic.com data: blob:;"
+              }
+            },
+            "bundle": {
+              "active": true,
+              "targets": ["dmg", "app"],
+              "icon": [
+                "icons/32x32.png",
+                "icons/128x128.png",
+                "icons/128x128@2x.png",
+                "icons/icon.icns",
+                "icons/icon.ico"
+              ],
+              "externalBin": ["binaries/lexi-backend"],
+              "resources": ["binaries/lexi-backend/**/*"]
+            },
+            "plugins": {
+              "shell": {
+                "sidecar": true,
+                "scope": [
+                  {
+                    "name": "lexi-backend",
+                    "sidecar": true,
+                    "args": true
+                  }
+                ]
+              }
+            }
+          }
+          CONF
+
+          # Update capabilities
+          cat > src-tauri/capabilities/default.json << 'CAP'
+          {
+            "$schema": "../gen/schemas/desktop-schema.json",
+            "identifier": "default",
+            "description": "enables the default permissions",
+            "windows": ["main"],
+            "permissions": [
+              "core:default",
+              "shell:allow-spawn",
+              "shell:allow-kill"
+            ]
+          }
+          CAP
+
+          # Update lib.rs for sidecar
+          cat > src-tauri/src/lib.rs << 'RUST'
+          use tauri::Manager;
+          use tauri_plugin_shell::ShellExt;
+          use std::sync::Mutex;
+
+          struct BackendState {
+              child: Option<tauri_plugin_shell::process::CommandChild>,
+          }
+
+          #[cfg_attr(mobile, tauri::mobile_entry_point)]
+          pub fn run() {
+              tauri::Builder::default()
+                  .plugin(tauri_plugin_shell::init())
+                  .manage(Mutex::new(BackendState { child: None }))
+                  .setup(|app| {
+                      if cfg!(debug_assertions) {
+                          app.handle().plugin(
+                              tauri_plugin_log::Builder::default()
+                                  .level(log::LevelFilter::Info)
+                                  .build(),
+                          )?;
+                      }
+
+                      let shell = app.shell();
+                      let sidecar = shell
+                          .sidecar("lexi-backend")
+                          .expect("failed to create sidecar command");
+
+                      let (mut rx, child) = sidecar
+                          .spawn()
+                          .expect("failed to spawn backend sidecar");
+
+                      let state = app.state::<Mutex<BackendState>>();
+                      state.lock().unwrap().child = Some(child);
+
+                      tauri::async_runtime::spawn(async move {
+                          use tauri_plugin_shell::process::CommandEvent;
+                          while let Some(event) = rx.recv().await {
+                              match event {
+                                  CommandEvent::Stdout(line) => {
+                                      println!("[Backend] {}", String::from_utf8_lossy(&line));
+                                  }
+                                  CommandEvent::Stderr(line) => {
+                                      eprintln!("[Backend] {}", String::from_utf8_lossy(&line));
+                                  }
+                                  CommandEvent::Error(err) => {
+                                      eprintln!("[Backend Error] {}", err);
+                                  }
+                                  CommandEvent::Terminated(payload) => {
+                                      println!("[Backend] Terminated: {:?}", payload.code);
+                                  }
+                                  _ => {}
+                              }
+                          }
+                      });
+
+                      println!("[Lexi] Backend sidecar started");
+                      Ok(())
+                  })
+                  .on_window_event(|window, event| {
+                      if let tauri::WindowEvent::CloseRequested { .. } = event {
+                          let state = window.state::<Mutex<BackendState>>();
+                          if let Some(child) = state.lock().unwrap().child.take() {
+                              let _ = child.kill();
+                              println!("[Lexi] Backend stopped");
+                          }
+                      }
+                  })
+                  .run(tauri::generate_context!())
+                  .expect("error while running tauri application");
+          }
+          RUST
+
+      - name: Build Tauri app
+        uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tagName: ${{ github.ref_name }}
+          releaseName: 'Lexi ${{ github.ref_name }}'
+          releaseBody: |
+            ## Lexi ${{ github.ref_name }}
+
+            ### Installation (macOS Apple Silicon)
+            1. Download `Lexi_${{ github.ref_name }}_aarch64.dmg`
+            2. Open DMG and drag Lexi to Applications
+            3. First run: Right-click → Open (bypasses Gatekeeper)
+            4. Enter your Gemini API key when prompted
+
+            ### Requirements
+            - macOS 12+ (Apple Silicon M1/M2/M3)
+            - Gemini API key ([Get one free](https://aistudio.google.com/app/apikey))
+            - Optional: Tailscale for OpenClaw integration
+
+            ### What's included
+            - Voice AI assistant (Gemini 2.5 Native Audio)
+            - Browser automation (WebAgent)
+            - CAD generation (build123d)
+            - 3D printer control
+            - Smart home control (Kasa)
+            - OpenClaw integration
+          releaseDraft: true
+          prerelease: false
