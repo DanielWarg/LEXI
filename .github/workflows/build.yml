@@ -239,7 +239,7 @@ jobs:
                           if let Some(child) = state.lock().unwrap().child.take() {
                               let _ = child.kill();
                               println!("[Lexi] Backend stopped");
-                          }
+                          };
                       }
                   })
                   .run(tauri::generate_context!())
