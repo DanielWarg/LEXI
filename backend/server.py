@@ -139,7 +139,7 @@ async def startup_event():
         video_device_index=SETTINGS.get("video_device_index")
     )
 
-async def initialize_lexi(device_index=None, output_device_index=None, device_name=None, video_device_index=None, muted=False):
+async def initialize_lexi(device_index=None, output_device_index=None, device_name=None, video_device_index=None, muted=True):
     global audio_loop, loop_task
     
     # FORCE DEFAULT DEVICES FOR STABILITY (User Request)
@@ -419,12 +419,12 @@ async def start_audio(sid, data=None):
     
     device_index = None
     device_name = None
-    muted = False
-    
+    muted = True  # Default to muted on startup
+
     if data:
         device_index = data.get('device_index')
         device_name = data.get('device_name')
-        muted = data.get('muted', False)
+        muted = data.get('muted', True)
             
     await initialize_lexi(device_index=device_index, device_name=device_name, muted=muted)
 
