@@ -500,6 +500,86 @@ async def confirm_tool(sid, data):
         print("Audio loop not active, cannot resolve confirmation.")
 
 @sio.event
+async def get_setup_status(sid):
+    """Check if the app is configured (API key present)."""
+    from dotenv import load_dotenv
+    load_dotenv()
+
+    gemini_key = os.getenv("GEMINI_API_KEY", "")
+    openclaw_url = SETTINGS.get("openclaw", {}).get("base_url", "")
+
+    status = {
+        "gemini_configured": bool(gemini_key and len(gemini_key) > 10),
+        "openclaw_configured": bool(openclaw_url),
+        "first_run": not bool(gemini_key)
+    }
+
+    print(f"[SERVER] Setup status: {status}")
+    await sio.emit('setup_status', status, to=sid)
+
+@sio.event
+async def set_api_key(sid, data):
+    """Save API key to .env file and reinitialize."""
+    key = data.get('key', '').strip()
+
+    if not key:
+        await sio.emit('api_key_result', {'success': False, 'error': 'No key provided'}, to=sid)
+        return
+
+    # Basic validation - Gemini keys start with "AI"
+    if not key.startswith('AI') or len(key) < 30:
+        await sio.emit('api_key_result', {'success': False, 'error': 'Invalid key format'}, to=sid)
+        return
+
+    try:
+        # Test the key by creating a client
+        import google.genai as genai
+        test_client = genai.Client(api_key=key)
+        # Quick test - list models (lightweight call)
+        models = list(test_client.models.list())
+        if not models:
+            raise Exception("Could not verify key")
+
+        # Save to .env file
+        env_path = os.path.join(os.path.dirname(__file__), '..', '.env')
+        env_content = ""
+
+        if os.path.exists(env_path):
+            with open(env_path, 'r') as f:
+                env_content = f.read()
+
+        # Update or add GEMINI_API_KEY
+        if 'GEMINI_API_KEY=' in env_content:
+            import re
+            env_content = re.sub(r'GEMINI_API_KEY=.*', f'GEMINI_API_KEY={key}', env_content)
+        else:
+            env_content += f'\nGEMINI_API_KEY={key}\n'
+
+        with open(env_path, 'w') as f:
+            f.write(env_content.strip() + '\n')
+
+        # Set environment variable for current session
+        os.environ['GEMINI_API_KEY'] = key
+
+        # Reload dotenv
+        from dotenv import load_dotenv
+        load_dotenv(override=True)
+
+        print(f"[SERVER] API key saved successfully")
+        await sio.emit('api_key_result', {'success': True}, to=sid)
+
+        # Reinitialize Lexi with new key
+        global audio_loop
+        if audio_loop:
+            audio_loop.stop()
+            audio_loop = None
+        await initialize_lexi(muted=True)
+
+    except Exception as e:
+        print(f"[SERVER] API key validation failed: {e}")
+        await sio.emit('api_key_result', {'success': False, 'error': str(e)}, to=sid)
+
+@sio.event
 async def ui_canvas_resize(sid, data):
     # data: { "width": 800, "height": 600 }
     width = data.get('width')
