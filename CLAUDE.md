@@ -49,6 +49,7 @@ Socket.IO bridges Python backend (port 8000) ↔ React frontend for real-time au
 ### Backend Entry Points
 - `backend/server.py` - FastAPI + Socket.IO server, authentication, settings persistence
 - `backend/lexi.py` - Main AI entity with Gemini 2.5 integration and audio loop
+- `backend/authenticator.py` - Face authentication (optional, disabled by default via `face_auth_enabled` setting)
 
 ### Frontend Entry Points
 - `src/main.tsx` - Vite entry
@@ -82,6 +83,13 @@ When adding or removing features, follow this order to avoid black screen:
 
 **Adding (top-down):** State → Props → Logic → UI
 **Removing (bottom-up):** UI → Logic → Props → State → Imports
+
+### CSS Scroll Containment
+All tool views must contain their scroll to prevent page-level scrolling:
+```css
+.container { overflow: hidden; }
+.scrollable { overflow-y: auto; overscroll-behavior: contain; min-height: 0; }
+```
 
 ### Socket.IO Events (Key)
 - `start_audio` / `stop_audio` - Activate/deactivate Lexi

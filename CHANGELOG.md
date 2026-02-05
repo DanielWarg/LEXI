@@ -1,5 +1,26 @@
 # Changelog
 
+## [2026-02-05] - Scroll Fixes & Camera Improvements
+
+### 🐛 Bug Fixes
+- **Scroll Overflow:** Fixed issue where tool views (WebAgent, CAD, etc.) would scroll the entire workspace when content overflowed. Added `overflow: hidden` and `overscroll-behavior: contain` to all tool containers.
+- **Camera View:** Fixed video feed not displaying. Refactored to properly handle async stream attachment with `useEffect` and `onloadedmetadata` events.
+- **Face Authentication:** Disabled FaceAuthenticator initialization when `face_auth_enabled` is false, preventing unnecessary OpenCV camera access errors on startup.
+
+### 🛠️ Improvements
+- **Scroll Isolation:** All tool views now properly contain their scroll behavior:
+  - SettingsView, FilesView, CameraView, KasaView, PrinterView
+  - WebToolContext, CadToolContext, VoiceWidget
+  - ToolMenu, MainLayout sidebar, CentralCanvas
+
+### 📁 Files Changed
+- `backend/server.py` - Conditional FaceAuthenticator initialization
+- `src/components/modules/*View.css` - Overflow containment
+- `src/components/tools/*Context.css` - Scroll isolation
+- `src/components/modules/CameraView.tsx` - Video stream handling
+
+---
+
 ## [Unreleased] - 2026-01-25
 
 ### 🚀 New Features

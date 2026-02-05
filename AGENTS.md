@@ -66,13 +66,16 @@
 
 ## 3. Project Status & Documentation
 
-### Current State (2026-01-24)
+### Current State (2026-02-05)
 - **Project Name:** Lexi
-- **Frontend:** **NEW** TypeScript/React 19 UI (Integrated from `lexi-ui`)
-- **Backend:** Python FastApi/Socket.IO
+- **Frontend:** TypeScript/React 19 UI with Vite + Tauri 2.0
+- **Backend:** Python FastAPI/Socket.IO
 - **WebAgent:** ✅ Active and functional
 - **Voice/Audio:** ✅ Restored and verified
 - **Performance:** ✅ Optimized (Hardware accelerated animations)
+- **Scroll Behavior:** ✅ Fixed (All tool views properly contain scroll)
+- **Camera:** ✅ Fixed (Proper async video stream handling)
+- **Face Auth:** ⚪ Optional (Disabled by default, no camera access on startup)
 
 ### Key Architectural Insight: React Prop Dependencies
 When adding or removing features, follow this order to avoid black screen:
@@ -89,6 +92,24 @@ When adding or removing features, follow this order to avoid black screen:
 2. Props to child components
 3. Logic implementation
 4. UI elements last
+
+### CSS Scroll Containment Pattern
+All tool views MUST follow this pattern to prevent scroll propagation:
+
+```css
+/* Container - prevents scroll from leaking out */
+.tool-view {
+    overflow: hidden;
+    box-sizing: border-box;
+}
+
+/* Scrollable child - contains scroll events */
+.scrollable-content {
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    min-height: 0;  /* Required for flex containers */
+}
+```
 
 ### Git Tags
 - `v1.0-webagent-working`: Stable base with WebAgent
