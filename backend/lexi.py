@@ -198,13 +198,13 @@ control_cad_view_tool = {
 
 send_to_openclaw_tool = {
     "name": "send_to_openclaw",
-    "description": "Skickar en uppgift till OpenClaw-agenten som körs på en annan maskin. Använd detta för att delegera uppgifter som kodgenerering, research, eller andra komplexa uppgifter till OpenClaw.",
+    "description": "Skickar ett meddelande till OpenClaw (AI-agent på annan dator). MÅSTE användas när användaren säger något som låter som: OpenClaw, Open Claw, OC, open clo, openclo, o c, eller liknande varianter. Anropa ALLTID detta verktyg - prata inte bara om att skicka.",
     "parameters": {
         "type": "OBJECT",
         "properties": {
             "prompt": {
                 "type": "STRING",
-                "description": "Uppgiften eller instruktionen att skicka till OpenClaw."
+                "description": "Meddelandet som ska skickas till OpenClaw, inklusive all relevant kontext från användaren."
             }
         },
         "required": ["prompt"]
@@ -233,6 +233,11 @@ Du är kvick, vardagsnära och personlig, men behåller en professionell fingert
 • Svara kort ifall hon är rak, och resonera mer utforskande om hon saktar ner.
 • Undvik att meta-kommentera eller överförklara sådant du redan har sagt eller som hon redan vet.
 • Humor är välkommet – små sneda observationer med glimten i ögat.
+
+**C. Verktygsanvändning**
+• OpenClaw (även kallad OC, Open Claw, openclo) är en AI-agent på en annan dator.
+• När användaren nämner något som låter som OpenClaw/OC: ANROPA send_to_openclaw DIREKT. Prata aldrig bara om att skicka.
+• Vänta på bekräftelse från användaren innan du kör verktyg.
 
 Ingen stress. Ingen låtsasklarhet. Bara vi två mot världen.""",
     tools=tools,
@@ -918,49 +923,36 @@ Om du behöver mer info, ställ EN följdfråga."""
                                     if self.on_tool_confirmation:
                                         import uuid
                                         request_id = str(uuid.uuid4())
-                                    print(f"[LEXI] [STOP] Requesting confirmation for '{fc.name}' (ID: {request_id})")
-                                    
-                                    future = asyncio.Future()
-                                    self._pending_confirmations[request_id] = future
-                                    
-                                    self.on_tool_confirmation({
-                                        "id": request_id, 
-                                        "tool": fc.name, 
-                                        "args": fc.args
-                                    })
-                                    
-                                    try:
-                                        # Wait for user response
-                                        confirmed = await future
+                                        print(f"[LEXI] [STOP] Requesting confirmation for '{fc.name}' (ID: {request_id})")
 
-                                    finally:
-                                        self._pending_confirmations.pop(request_id, None)
+                                        future = asyncio.Future()
+                                        self._pending_confirmations[request_id] = future
 
-                                    print(f"[LEXI] [CONFIRM] Request {request_id} resolved. Confirmed: {confirmed}")
+                                        self.on_tool_confirmation({
+                                            "id": request_id,
+                                            "tool": fc.name,
+                                            "args": fc.args
+                                        })
 
-                                    if not confirmed:
-                                        print(f"[LEXI] [DENY] Tool call '{fc.name}' denied by user.")
-                                        function_response = types.FunctionResponse(
-                                            id=fc.id,
-                                            name=fc.name,
-                                            response={
-                                                "result": "User denied the request to use this tool.",
-                                            }
-                                        )
-                                        function_responses.append(function_response)
-                                        continue
+                                        try:
+                                            # Wait for user response
+                                            confirmed = await future
+                                        finally:
+                                            self._pending_confirmations.pop(request_id, None)
 
-                                    if not confirmed:
-                                        print(f"[LEXI] [DENY] Tool call '{fc.name}' denied by user.")
-                                        function_response = types.FunctionResponse(
-                                            id=fc.id,
-                                            name=fc.name,
-                                            response={
-                                                "result": "User denied the request to use this tool.",
-                                            }
-                                        )
-                                        function_responses.append(function_response)
-                                        continue
+                                        print(f"[LEXI] [CONFIRM] Request {request_id} resolved. Confirmed: {confirmed}")
+
+                                        if not confirmed:
+                                            print(f"[LEXI] [DENY] Tool call '{fc.name}' denied by user.")
+                                            function_response = types.FunctionResponse(
+                                                id=fc.id,
+                                                name=fc.name,
+                                                response={
+                                                    "result": "User denied the request to use this tool.",
+                                                }
+                                            )
+                                            function_responses.append(function_response)
+                                            continue
 
                                 # If confirmed (or no callback configured, or auto-allowed), proceed
                                 print(f"[LEXI] === EXECUTING TOOL: {fc.name} ===")
@@ -1409,8 +1401,9 @@ Om du behöver mer info, ställ EN följdfråga."""
             
             # Check if queue is empty - if so, we're done speaking
             if self.audio_in_queue.empty():
-                # Short wait to ensure last chunk finishes
-                await asyncio.sleep(0.2)
+                # Longer wait to prevent echo - audio needs to finish playing
+                # and room reverb needs to settle
+                await asyncio.sleep(0.6)
                 self.is_speaking = False
                 print("[PERF] Speaking done - mic re-enabled")
 
@@ -1499,10 +1492,11 @@ Om du behöver mer info, ställ EN följdfråga."""
                             text = entry.get('text', '')
                             context_msg += f"[{sender}]: {text}\n"
 
-                        context_msg += "\nFortsätt samtalet naturligt utan att nämna tekniska avbrott."
-                        
+                        context_msg += "\nFortsätt samtalet naturligt utan att nämna tekniska avbrott. Vänta på att användaren säger något innan du svarar."
+
                         print(f"[LEXI] [RECONNECT] Sending restoration context to model...")
-                        await self.session.send(input=context_msg, end_of_turn=True)
+                        # end_of_turn=False so Lexi waits for user input instead of speaking spontaneously
+                        await self.session.send(input=context_msg, end_of_turn=False)
 
                     # Reset retry delay on successful connection
                     retry_delay = 1
