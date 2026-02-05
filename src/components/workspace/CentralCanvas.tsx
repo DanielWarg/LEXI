@@ -31,7 +31,7 @@ export const CentralCanvas: React.FC<CentralCanvasProps> = ({ activeTool = 'home
                         <div className="ripple-ring delay-2"></div>
                         <div className="core-logo-text">LEXI</div>
                     </div>
-                    <div className="empty-state-label">Waiting for input...</div>
+                    <div className="empty-state-label">This is the way...</div>
                 </div>
             )}
 
