@@ -76,6 +76,7 @@
 - **Scroll Behavior:** ✅ Fixed (All tool views properly contain scroll)
 - **Camera:** ✅ Fixed (Proper async video stream handling)
 - **Face Auth:** ⚪ Optional (Disabled by default, no camera access on startup)
+- **OpenClaw:** ✅ NEW - Remote AI agent integration via Tailscale
 
 ### Key Architectural Insight: React Prop Dependencies
 When adding or removing features, follow this order to avoid black screen:
@@ -118,9 +119,53 @@ All tool views MUST follow this pattern to prevent scroll propagation:
 
 ---
 
-## 4. Next Steps
+## 4. Backend Agents
 
-### 🎯 Active: UI Polish & Feature Re-integration
+### Available Capabilities
+| Agent | File | Description |
+|-------|------|-------------|
+| WebAgent | `web_agent.py` | Browser automation (Playwright) |
+| CadAgent | `cad_agent.py` | CAD generation (build123d + Gemini) |
+| PrinterAgent | `printer_agent.py` | 3D printer control (OctoPrint/Moonraker) |
+| KasaAgent | `kasa_agent.py` | Smart home (TP-Link Kasa) |
+| OpenClawAgent | `openclaw_agent.py` | Remote AI agent via Tailscale |
+| ProjectManager | `project_manager.py` | File/project organization |
+
+### OpenClaw Integration
+Remote AI agent running on separate hardware (MacBook Air M1), accessible via Tailscale mesh network.
+
+**Architecture:**
+```
+Lexi (Arbetsytan) ──Tailscale──> OpenClaw (MacBook Air M1)
+     │                               │
+     │ OpenAI-compatible API         │ Claude Sonnet
+     │ /v1/chat/completions          │ File operations
+     └───────────────────────────────┘
+```
+
+**Configuration:** `settings.json`
+```json
+{
+  "openclaw": {
+    "base_url": "https://your-machine.tailnet.ts.net",
+    "token": "your-bearer-token",
+    "model": "sonnet"
+  }
+}
+```
+
+**Tool Pattern:** NON_BLOCKING (response via callback, not inline)
+
+---
+
+## 5. Next Steps
+
+### 🎯 Active: OpenClaw Feature Expansion
+1. ✅ **OpenClaw Integration:** Basic communication working
+2. 🔄 **Two-way File Transfer:** Upload endpoint on Lexi with token validation
+3. 🔄 **Wake Word:** Alternative to always-on microphone
+
+### 🔄 UI Polish & Feature Re-integration
 1. ✅ **Migrate UI:** Moved `lexi-ui` codebase into main `Lexi` repo.
 2. 🔄 **Verify Integrations:** Ensure backend socket events map correctly to new frontend components.
 3. 🔄 **Clean up:** Remove unused assets from old Electron implementation if any remain.

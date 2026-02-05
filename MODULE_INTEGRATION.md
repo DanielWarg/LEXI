@@ -1,5 +1,5 @@
 # Module Integration Contract (Lexi Repo)
-*Version: 2.0 (Legacy Standard)*
+*Version: 2.1 (Updated 2026-02-05 with Remote Module pattern)*
 
 Detta dokument beskriver den **faktiska arkitekturen** som används av Lexis befintliga kärnmoduler (`KasaAgent`, `PrinterAgent`).
 Nya moduler ska följa detta mönster för att säkerställa 100% kompatibilitet och funktion direkt.
@@ -119,7 +119,45 @@ elif fc.name == "say_hello":
 
 ---
 
-## 5. "Advanced Module" (High Risk + Side Effects)
+## 5. "Remote Module" (External API Integration)
+*Exempel: `OpenClawAgent`. Används för kommunikation med externa AI-system.*
+
+### 5.1 External API Pattern
+```python
+class OpenClawAgent:
+    def __init__(self, base_url: str = "", token: str = ""):
+        self.base_url = base_url.rstrip("/") if base_url else ""
+        self.token = token
+        self._session: Optional[aiohttp.ClientSession] = None
+
+    async def send_task(self, prompt: str, timeout: int = 120) -> dict:
+        """Send task to remote agent via OpenAI-compatible API."""
+        if not self.base_url or not self.token:
+            return {"success": False, "error": "Not configured"}
+
+        headers = {
+            "Authorization": f"Bearer {self.token}",
+            "Content-Type": "application/json"
+        }
+        payload = {
+            "model": self.model,
+            "messages": [{"role": "user", "content": prompt}]
+        }
+
+        async with session.post(f"{self.base_url}/v1/chat/completions",
+                                json=payload, headers=headers) as resp:
+            # Handle response...
+```
+
+### 5.2 NON_BLOCKING Tool Pattern
+For long-running external operations, use the NON_BLOCKING pattern:
+1. **Tool triggers background task** (no immediate response to model)
+2. **Agent performs operation** (may take 30-120 seconds)
+3. **Callback notifies completion** (sends result to Gemini session)
+
+---
+
+## 6. "Advanced Module" (High Risk + Side Effects)
 *Exempel: `WebAgent`. Används för långkörande processer eller autonoma agents.*
 
 ### 5.1 Callbacks (Side Effects)
