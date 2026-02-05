@@ -37,4 +37,3 @@
 *   **CHANGELOG:** Created initial log.
 
 ---
-*Maintained by Nazir Louis*

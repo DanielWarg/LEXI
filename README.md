@@ -82,7 +82,7 @@ Lexi runs as a hybrid Local-First system:
 
 1. **Clone the repo**
    ```bash
-   git clone https://github.com/nazirlouis/lexi_v2.git
+   git clone https://github.com/your-username/lexi_v2.git
    cd lexi_v2
    ```
 
@@ -120,4 +120,3 @@ Lexi runs as a hybrid Local-First system:
 
 ---
 
-**Built by Nazir Louis**
