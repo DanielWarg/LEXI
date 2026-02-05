@@ -196,7 +196,23 @@ control_cad_view_tool = {
     }
 }
 
-tools = [{'google_search': {}}, {"function_declarations": [run_web_agent, create_project_tool, switch_project_tool, list_projects_tool, list_smart_devices_tool, control_light_tool, discover_printers_tool, print_stl_tool, get_print_status_tool, generate_cad, iterate_cad_tool, control_cad_view_tool] + tools_list[0]['function_declarations'][1:]}]
+send_to_openclaw_tool = {
+    "name": "send_to_openclaw",
+    "description": "Skickar en uppgift till OpenClaw-agenten som körs på en annan maskin. Använd detta för att delegera uppgifter som kodgenerering, research, eller andra komplexa uppgifter till OpenClaw.",
+    "parameters": {
+        "type": "OBJECT",
+        "properties": {
+            "prompt": {
+                "type": "STRING",
+                "description": "Uppgiften eller instruktionen att skicka till OpenClaw."
+            }
+        },
+        "required": ["prompt"]
+    },
+    "behavior": "NON_BLOCKING"
+}
+
+tools = [{'google_search': {}}, {"function_declarations": [run_web_agent, create_project_tool, switch_project_tool, list_projects_tool, list_smart_devices_tool, control_light_tool, discover_printers_tool, print_stl_tool, get_print_status_tool, generate_cad, iterate_cad_tool, control_cad_view_tool, send_to_openclaw_tool] + tools_list[0]['function_declarations'][1:]}]
 
 # --- CONFIG UPDATE: Enabled Transcription ---
 config = types.LiveConnectConfig(
@@ -235,6 +251,7 @@ from cad_agent import CadAgent
 from web_agent import WebAgent
 from kasa_agent import KasaAgent
 from printer_agent import PrinterAgent
+from openclaw_agent import OpenClawAgent
 
 class AudioLoop:
     def __init__(self, video_mode=DEFAULT_MODE, on_audio_data=None, on_video_frame=None, on_cad_data=None, on_web_data=None, on_transcription=None, on_tool_confirmation=None, on_cad_status=None, on_cad_thought=None, on_cad_zoom=None, on_project_update=None, on_device_update=None, on_error=None, on_tool_activate=None, input_device_index=None, input_device_name=None, output_device_index=None, video_device_index=0, kasa_agent=None):
@@ -286,6 +303,7 @@ class AudioLoop:
         self.web_agent = WebAgent()
         self.kasa_agent = kasa_agent if kasa_agent else KasaAgent()
         self.printer_agent = PrinterAgent()
+        self.openclaw_agent = OpenClawAgent()  # Configure host via settings
 
         self.send_text_task = None
         self.stop_event = asyncio.Event()
@@ -332,6 +350,11 @@ class AudioLoop:
     def update_permissions(self, new_perms):
         print(f"[LEXI DEBUG] [CONFIG] Updating tool permissions: {new_perms}")
         self.permissions.update(new_perms)
+
+    def configure_openclaw(self, base_url: str, token: str = "", model: str = "sonnet"):
+        """Configure OpenClaw connection settings."""
+        print(f"[LEXI] [CONFIG] Configuring OpenClaw: base_url={base_url}, model={model}")
+        self.openclaw_agent.configure(base_url, token, model)
 
     def set_paused(self, paused):
         self.paused = paused
@@ -742,6 +765,61 @@ class AudioLoop:
         except Exception as e:
              print(f"[LEXI DEBUG] [ERR] Failed to send web agent result to model: {e}")
 
+    async def handle_openclaw_request(self, prompt):
+        """Send a task to remote OpenClaw instance via Tailscale."""
+        print(f"[LEXI] [OPENCLAW] Task: '{prompt[:80]}...'")
+
+        # Check if OpenClaw is configured
+        if not self.openclaw_agent.base_url:
+            error_msg = "OpenClaw är inte konfigurerad. Ange URL i inställningarna."
+            print(f"[LEXI] [OPENCLAW] ERROR: {error_msg}")
+            try:
+                await self.session.send(input=f"Systemmeddelande: {error_msg}", end_of_turn=True)
+            except Exception as e:
+                print(f"[LEXI] [OPENCLAW] Failed to send error: {e}")
+            return
+
+        # Initialize if needed
+        await self.openclaw_agent.initialize()
+
+        # Build system prompt with context (per OC's recommendation)
+        system_prompt = """Du är en voice-first AI-assistent.
+Svar KORT (1-3 meningar).
+Inga markdown-block, inga listor.
+Naturligt talspråk - som om du pratar högt.
+Om du behöver mer info, ställ EN följdfråga."""
+
+        # Send the task with system prompt
+        print(f"[LEXI] [OPENCLAW] Sending task to OpenClaw...")
+        result = await self.openclaw_agent.send_task(
+            prompt,
+            timeout=120,
+            system_prompt=system_prompt
+        )
+
+        if result.get("success"):
+            response_text = result.get("response", "Inget svar")
+            print(f"[LEXI] [OPENCLAW] Task completed. Response length: {len(response_text)}")
+
+            # Send result back to Lexi's model
+            try:
+                await self.session.send(
+                    input=f"Systemmeddelande: Svar från OpenClaw:\n{response_text}\n\nLäs upp detta svar för användaren på ett naturligt sätt.",
+                    end_of_turn=True
+                )
+            except Exception as e:
+                print(f"[LEXI] [OPENCLAW] Failed to send result to model: {e}")
+        else:
+            error_msg = result.get("error", "Okänt fel")
+            print(f"[LEXI] [OPENCLAW] Task failed: {error_msg}")
+            try:
+                await self.session.send(
+                    input=f"Systemmeddelande: OpenClaw-uppgiften misslyckades: {error_msg}",
+                    end_of_turn=True
+                )
+            except Exception as e:
+                print(f"[LEXI] [OPENCLAW] Failed to send error: {e}")
+
     async def receive_audio(self):
         "Background task to reads from the websocket and write pcm chunks to the output queue"
         try:
@@ -825,7 +903,7 @@ class AudioLoop:
                         function_responses = []
                         for fc in response.tool_call.function_calls:
                             print(f"[LEXI] Processing tool: {fc.name} with args: {fc.args}")
-                            if fc.name in ["generate_cad", "run_web_agent", "write_file", "read_directory", "read_file", "create_project", "switch_project", "list_projects", "list_smart_devices", "control_light", "discover_printers", "print_stl", "get_print_status", "iterate_cad", "control_cad_view"]:
+                            if fc.name in ["generate_cad", "run_web_agent", "write_file", "read_directory", "read_file", "create_project", "switch_project", "list_projects", "list_smart_devices", "control_light", "discover_printers", "print_stl", "get_print_status", "iterate_cad", "control_cad_view", "send_to_openclaw"]:
                                 prompt = fc.args.get("prompt", "") # Prompt is not present for all tools
                                 
                                 # Check Permissions (Default to True if not set)
@@ -1231,6 +1309,21 @@ class AudioLoop:
 
                                     function_response = types.FunctionResponse(
                                         id=fc.id, name=fc.name, response={"result": result_str}
+                                    )
+                                    function_responses.append(function_response)
+
+                                elif fc.name == "send_to_openclaw":
+                                    prompt = fc.args.get("prompt", "")
+                                    print(f"[LEXI] [TOOL] Tool Call: 'send_to_openclaw' prompt='{prompt[:50]}...'")
+
+                                    # Run OpenClaw task in background
+                                    asyncio.create_task(self.handle_openclaw_request(prompt))
+
+                                    result_text = "OpenClaw-uppgift startad. Väntar på svar..."
+                                    function_response = types.FunctionResponse(
+                                        id=fc.id,
+                                        name=fc.name,
+                                        response={"result": result_text}
                                     )
                                     function_responses.append(function_response)
 
