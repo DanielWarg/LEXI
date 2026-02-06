@@ -65,9 +65,9 @@ jobs:
           # Create binaries directory
           mkdir -p src-tauri/binaries
 
-          # Build with PyInstaller
-          pyinstaller --name lexi-backend \
-            --onedir \
+          # Build with PyInstaller as single file
+          pyinstaller --name lexi-backend-aarch64-apple-darwin \
+            --onefile \
             --noconfirm \
             --distpath src-tauri/binaries \
             --hidden-import=engineio.async_drivers.aiohttp \
@@ -88,16 +88,9 @@ jobs:
             --collect-all python_kasa \
             backend/server.py
 
-          # Create Tauri sidecar wrapper (must match target triple)
-          cat > src-tauri/binaries/lexi-backend-aarch64-apple-darwin << 'WRAPPER'
-          #!/bin/bash
-          DIR="$(cd "$(dirname "$0")" && pwd)"
-          exec "$DIR/lexi-backend/lexi-backend" "$@"
-          WRAPPER
-          chmod +x src-tauri/binaries/lexi-backend-aarch64-apple-darwin
-
-          # Verify
+          # Verify - should be a single executable
           ls -la src-tauri/binaries/
+          file src-tauri/binaries/lexi-backend-aarch64-apple-darwin
 
       - name: Configure Tauri for sidecar
         run: |
@@ -143,8 +136,7 @@ jobs:
                 "icons/icon.icns",
                 "icons/icon.ico"
               ],
-              "externalBin": ["binaries/lexi-backend"],
-              "resources": ["binaries/lexi-backend/**/*"]
+              "externalBin": ["binaries/lexi-backend"]
             },
             "plugins": {
               "shell": {
