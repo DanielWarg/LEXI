@@ -152,11 +152,11 @@
     display: flex;
     flex: 1;
     align-items: center;
-    gap: 12px;
+    gap: 8px;
     background: var(--bg-app);
     border: 1px solid var(--border-subtle);
-    border-radius: 8px;
-    padding: 10px 14px;
+    border-radius: 6px;
+    padding: 6px 10px;
     transition: border-color 0.2s;
 }
 
@@ -169,9 +169,9 @@
     border: none;
     color: var(--text-main);
     flex-grow: 1;
-    font-size: 0.9rem;
+    font-size: 0.85rem;
     outline: none;
-    padding: 6px 0;
+    padding: 4px 0;
 }
 
 .icon-btn {
