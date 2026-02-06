@@ -7,6 +7,7 @@
   "main": "electron/main.js",
   "scripts": {
     "dev": "vite",
+    "dev:web": "vite",
     "dev:electron": "concurrently -k \"vite\" \"wait-on tcp:5173 && npx electron .\"",
     "tauri": "tauri",
     "build": "tsc -b && vite build",

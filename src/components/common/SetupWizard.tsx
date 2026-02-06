@@ -1,6 +1,6 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { useSocket } from '../../context/SocketContext';
-import { Key, CheckCircle, AlertCircle, Loader2 } from 'lucide-react';
+import { Key, CheckCircle, AlertCircle, Loader2, WifiOff } from 'lucide-react';
 import './SetupWizard.css';
 
 interface SetupStatus {
@@ -9,12 +9,44 @@ interface SetupStatus {
     first_run: boolean;
 }
 
+const CONNECTION_TIMEOUT_MS = 10000; // 10 seconds
+
 export const SetupWizard: React.FC = () => {
     const { socket, connected } = useSocket();
-    const [visible, setVisible] = useState(false);
+    const [visible, setVisible] = useState(true); // Start visible to show connecting state
     const [apiKey, setApiKey] = useState('');
-    const [step, setStep] = useState<'loading' | 'api-key' | 'testing' | 'success' | 'error'>('loading');
+    const [step, setStep] = useState<'connecting' | 'loading' | 'api-key' | 'testing' | 'success' | 'error' | 'connection-error'>('connecting');
     const [errorMessage, setErrorMessage] = useState('');
+    const [connectionAttempts, setConnectionAttempts] = useState(0);
+
+    const handleRetryConnection = useCallback(() => {
+        setStep('connecting');
+        setConnectionAttempts(prev => prev + 1);
+        // Socket.IO will automatically try to reconnect
+        if (socket) {
+            socket.connect();
+        }
+    }, [socket]);
+
+    // Handle connection state
+    useEffect(() => {
+        if (connected) {
+            setStep('loading');
+            return;
+        }
+
+        // Show connecting state initially
+        if (step === 'connecting') {
+            const timeout = setTimeout(() => {
+                if (!connected) {
+                    setStep('connection-error');
+                    setErrorMessage('Could not connect to Lexi backend. The backend may still be starting up.');
+                }
+            }, CONNECTION_TIMEOUT_MS);
+
+            return () => clearTimeout(timeout);
+        }
+    }, [connected, step, connectionAttempts]);
 
     useEffect(() => {
         if (!socket || !connected) return;
@@ -43,14 +75,24 @@ export const SetupWizard: React.FC = () => {
             }
         };
 
+        const handleDisconnect = () => {
+            // If we disconnect while in a critical step, show connection error
+            if (step === 'testing') {
+                setStep('connection-error');
+                setErrorMessage('Lost connection to backend during API key validation.');
+            }
+        };
+
         socket.on('setup_status', handleSetupStatus);
         socket.on('api_key_result', handleApiKeyResult);
+        socket.on('disconnect', handleDisconnect);
 
         return () => {
             socket.off('setup_status', handleSetupStatus);
             socket.off('api_key_result', handleApiKeyResult);
+            socket.off('disconnect', handleDisconnect);
         };
-    }, [socket, connected]);
+    }, [socket, connected, step]);
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
@@ -75,6 +117,27 @@ export const SetupWizard: React.FC = () => {
                     <h1>Welcome to Lexi</h1>
                     <p>Let's get you set up</p>
                 </div>
+
+                {step === 'connecting' && (
+                    <div className="setup-step">
+                        <Loader2 className="spin" size={48} />
+                        <p>Connecting to backend...</p>
+                    </div>
+                )}
+
+                {step === 'connection-error' && (
+                    <div className="setup-step error">
+                        <WifiOff size={48} />
+                        <h2>Backend Unavailable</h2>
+                        <p>{errorMessage}</p>
+                        <p className="setup-hint">
+                            If running from the app bundle, check Console.app for backend logs.
+                        </p>
+                        <button onClick={handleRetryConnection} className="setup-button">
+                            Retry Connection
+                        </button>
+                    </div>
+                )}
 
                 {step === 'loading' && (
                     <div className="setup-step">

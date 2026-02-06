@@ -59,6 +59,7 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
           pip install pyinstaller
+          playwright install chromium
 
       - name: Build Python backend
         run: |
@@ -86,6 +87,12 @@ jobs:
             --collect-all build123d \
             --collect-all mediapipe \
             --collect-all python_kasa \
+            --collect-all pydantic \
+            --hidden-import=mss \
+            --hidden-import=mss.darwin \
+            --hidden-import=numpy \
+            --hidden-import=PIL.Image \
+            --hidden-import=cv2 \
             backend/server.py
 
           # Verify - should be a single executable
