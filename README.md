@@ -9,6 +9,15 @@
 
 Lexi is a voice-first AI assistant built for people who build things. She is not a chatbot; she is a persistent entity that lives in your workspace, understands your projects, and operates your tools.
 
+## 📥 Download
+
+**[⬇️ Download Lexi for macOS (Apple Silicon)](https://github.com/DanielWarg/LEXI/releases/latest/download/Lexi_0.1.0_aarch64.dmg)**
+
+After installing, run this command to allow the app to open:
+```bash
+xattr -cr /Applications/Lexi.app
+```
+
 [📄 Read our Vision](VISION.md)
 
 ---
