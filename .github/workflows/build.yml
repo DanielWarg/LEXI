@@ -148,14 +148,7 @@ jobs:
             },
             "plugins": {
               "shell": {
-                "sidecar": true,
-                "scope": [
-                  {
-                    "name": "lexi-backend",
-                    "sidecar": true,
-                    "args": true
-                  }
-                ]
+                "open": true
               }
             }
           }
@@ -171,7 +164,17 @@ jobs:
             "permissions": [
               "core:default",
               "shell:allow-spawn",
-              "shell:allow-kill"
+              "shell:allow-kill",
+              {
+                "identifier": "shell:allow-execute",
+                "allow": [
+                  {
+                    "name": "lexi-backend",
+                    "sidecar": true,
+                    "args": true
+                  }
+                ]
+              }
             ]
           }
           CAP
