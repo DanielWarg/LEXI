@@ -9,6 +9,7 @@ env/
 
 # Lexi Specific Local Data
 backend/reference.jpg
+settings.json
 backend/settings.json
 backend/last_cad_generation.json
 long_term_memory/
