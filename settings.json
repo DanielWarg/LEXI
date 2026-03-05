@@ -18,8 +18,8 @@
     "input_device_index": 1,
     "output_device_index": 3,
     "openclaw": {
-        "base_url": "https://***REMOVED***",
-        "token": "***REMOVED***",
+        "base_url": "",
+        "token": "",
         "model": "sonnet"
     }
 }
