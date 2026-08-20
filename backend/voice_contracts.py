@@ -167,3 +167,130 @@ def mono_to_stereo_pcm16(mono: bytes) -> bytes:
         raise ValueError(f"mono PCM16 byte count must be even, got {len(mono)}")
     return b"".join(mono[i : i + 2] + mono[i : i + 2] for i in range(0, len(mono), 2))
 
+
+# --- Canonical-field parity (FAS 5.3) ---------------------------------------
+
+_MONTHS = {
+    "januari": "01", "februari": "02", "mars": "03", "april": "04",
+    "maj": "05", "juni": "06", "juli": "07", "augusti": "08",
+    "september": "09", "oktober": "10", "november": "11", "december": "12",
+}
+_WORD_NUMBERS = {
+    "noll": 0, "ett": 1, "en": 1, "två": 2, "tre": 3, "fyra": 4, "fem": 5,
+    "sex": 6, "sju": 7, "åtta": 8, "nio": 9, "tio": 10, "elva": 11, "tolv": 12,
+    "tretton": 13, "fjorton": 14, "femton": 15, "sexton": 16, "sjutton": 17,
+    "arton": 18, "nitton": 19, "tjugo": 20, "trettio": 30, "fyrtio": 40,
+    "femtio": 50, "hundra": 100, "tusen": 1000,
+}
+_WORD_NUMBERS.update({"tva": 2, "atta": 8})
+
+
+def _clean(value: str) -> str:
+    import re
+    import unicodedata
+
+    folded = unicodedata.normalize("NFKD", value).encode("ascii", "ignore").decode()
+    return re.sub(r"[^a-z0-9]+", " ", folded.lower()).strip()
+
+
+def _amount(text: str) -> str | None:
+    import re
+
+    match = re.search(r"(?<!\w)([\d .]+)(?:[,\\.]\d{1,2})?\s*(?:kr|sek|kronor)", text, re.I)
+    if match:
+        return re.sub(r"[^0-9]", "", match.group(1))
+    before_recipient = re.split(r"\s+(?:till|to|mottagare)\s+", _clean(text), maxsplit=1)[0]
+    words = [_WORD_NUMBERS.get(w) for w in before_recipient.split()]
+    values = [v for v in words if v is not None]
+    if not values:
+        return None
+    total = 0
+    current = 0
+    for value in values:
+        if value == 1000:
+            total += max(current, 1) * 1000
+            current = 0
+        elif value == 100:
+            current = max(current, 1) * 100
+        else:
+            current += value
+    return str(total + current) if (total + current) else None
+
+
+def _canonical_fields(text: str) -> dict[str, str]:
+    import re
+
+    cleaned = _clean(text)
+    result: dict[str, str] = {}
+    recipient = re.search(
+        r"(?:till|to|mottagare)\s+([a-z]+(?:\s+[a-z]+){0,2}?)"
+        r"(?=\s+(?:den|at|kl|klockan|kommando|command)|$)",
+        cleaned,
+    )
+    if recipient:
+        result["recipient"] = recipient.group(1).strip()
+    amount = _amount(text)
+    if amount:
+        result["amount"] = amount
+    date = re.search(r"(20\d{2})[- /](\d{1,2})[- /](\d{1,2})", cleaned)
+    if date:
+        result["date"] = f"{date.group(1)}-{int(date.group(2)):02d}-{int(date.group(3)):02d}"
+    else:
+        named = re.search(rf"(\d{{1,2}})\s+({'|'.join(_MONTHS)})\s+(20\d{{2}})", cleaned)
+        if named:
+            result["date"] = f"{named.group(3)}-{_MONTHS[named.group(2)]}-{int(named.group(1)):02d}"
+    clock = re.search(r"(?:kl|klockan|at)\s+(\d{1,2})\s*[: ]\s*(\d{2})", cleaned)
+    if clock:
+        result["time"] = f"{int(clock.group(1)):02d}:{clock.group(2)}"
+    command = re.search(r"(?:kommando|command)\s*[: ]\s*([a-z]+)", cleaned)
+    if command:
+        result["command"] = command.group(1)
+    elif cleaned:
+        result["command"] = cleaned.split()[0]
+    return result
+
+
+class ParityStatus:
+    MATCH = "match"
+    MISMATCH = "mismatch"
+    ERROR = "error"
+
+
+def compare_parity(canonical_text: str, spoken_text: str) -> dict:
+    """Compare canonical Hermes text against a spoken transcription.
+
+    Returns {"status", "mismatches", "canonical_text", "telemetry"}.
+    Never mutates or rewrites canonical text. Malformed/unknown input fails
+    closed to ERROR — never a silent MATCH.
+    """
+    if not isinstance(canonical_text, str) or not isinstance(spoken_text, str):
+        return {
+            "status": ParityStatus.ERROR,
+            "mismatches": (),
+            "canonical_text": str(canonical_text),
+            "telemetry": ({"field": "input", "reason": "malformed_input"},),
+        }
+    if not canonical_text.strip() or not spoken_text.strip():
+        return {
+            "status": ParityStatus.ERROR,
+            "mismatches": (),
+            "canonical_text": canonical_text,
+            "telemetry": ({"field": "input", "reason": "malformed_input"},),
+        }
+    canonical = _canonical_fields(canonical_text)
+    spoken = _canonical_fields(spoken_text)
+    if not canonical:
+        return {
+            "status": ParityStatus.ERROR,
+            "mismatches": (),
+            "canonical_text": canonical_text,
+            "telemetry": ({"field": "input", "reason": "no_canonical_fields"},),
+        }
+    mismatches = tuple(f for f, v in canonical.items() if spoken.get(f) != v)
+    return {
+        "status": ParityStatus.MISMATCH if mismatches else ParityStatus.MATCH,
+        "mismatches": mismatches,
+        "canonical_text": canonical_text,
+        "telemetry": [{"field": f, "reason": "field_mismatch"} for f in mismatches],
+    }
+

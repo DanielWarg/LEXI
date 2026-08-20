@@ -139,3 +139,51 @@ def test_mono_to_stereo_pcm16_empty():
     from backend.voice_contracts import mono_to_stereo_pcm16
 
     assert mono_to_stereo_pcm16(b"") == b""
+
+
+def test_parity_matches_spoken_variation():
+    from backend.voice_contracts import ParityStatus, compare_parity
+
+    canonical = "Skicka 1 250,00 kr till Anna Andersson den 2026-08-20 kl 14:30. Kommando: skicka"
+    spoken = (
+        "Skicka ett tusen två hundra femtio kronor till anna andersson den 20 augusti "
+        "2026 klockan 14 30"
+    )
+    r = compare_parity(canonical, spoken)
+    assert r["status"] is ParityStatus.MATCH
+    assert r["mismatches"] == ()
+
+
+def test_parity_detects_amount_mismatch():
+    from backend.voice_contracts import ParityStatus, compare_parity
+
+    r = compare_parity(
+        "Betala 100 kr till Erik den 2026-08-20 kl 09:15. Kommando: betala",
+        "Betala 900 kr till Erik den 2026-08-20 klockan 09 15",
+    )
+    assert r["status"] is ParityStatus.MISMATCH
+    assert "amount" in r["mismatches"]
+
+
+def test_parity_detects_date_mismatch():
+    from backend.voice_contracts import ParityStatus, compare_parity
+
+    r = compare_parity("den 2026-08-20", "den 2026-08-21")
+    assert r["status"] is ParityStatus.MISMATCH
+    assert "date" in r["mismatches"]
+
+
+def test_parity_malformed_input_fails_closed():
+    from backend.voice_contracts import ParityStatus, compare_parity
+
+    r = compare_parity("", "")
+    assert r["status"] is ParityStatus.ERROR
+    assert r["telemetry"][0]["reason"] == "malformed_input"
+
+
+def test_parity_never_mutates_canonical():
+    from backend.voice_contracts import compare_parity
+
+    canon = "Betala 1000 kr till Kim"
+    r = compare_parity(canon, "Betala 900 kr till kim")
+    assert r["canonical_text"] == canon
