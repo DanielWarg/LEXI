@@ -49,6 +49,17 @@ class PlaybackQueue:
 
     put_nowait = put
 
+    async def put_async(self, item: Any) -> None:
+        """Put an item, blocking (backpressure) when full instead of crashing."""
+        async with self._condition:
+            while self.qsize >= self.maxsize:
+                if self._cancelled:
+                    raise QueueCancelledError("playback queue is cancelled")
+                await self._condition.wait()
+            self._check_cancelled()
+            self._items.append(item)
+            self._condition.notify_all()
+
     async def get(self) -> Any:
         async with self._condition:
             while not self._items:
@@ -56,7 +67,9 @@ class PlaybackQueue:
                     raise QueueCancelledError("playback queue is cancelled")
                 await self._condition.wait()
             self._check_cancelled()
-            return self._items.pop(0)
+            item = self._items.pop(0)
+            self._condition.notify_all()
+            return item
 
     def get_nowait(self) -> Any:
         self._check_cancelled()
@@ -68,6 +81,7 @@ class PlaybackQueue:
         self._check_cancelled()
         count = len(self._items)
         self._items.clear()
+        self._notify_waiters()
         return count
 
     def cancel(self) -> None:
@@ -126,6 +140,13 @@ class PlaybackGeneration:
         if not self.is_current(generation):
             return False
         self.queue.put(item)
+        return True
+
+    async def put_async(self, generation: int, item: Any) -> bool:
+        """Queue current-generation chunks with backpressure (never crashes on full)."""
+        if not self.is_current(generation):
+            return False
+        await self.queue.put_async(item)
         return True
 
 

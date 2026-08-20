@@ -411,6 +411,10 @@ class AudioLoop:
     async def send_realtime(self):
         while True:
             msg = await self.out_queue.get()
+            # End-of-turn marker → send with end_of_turn=True so Gemini responds
+            if isinstance(msg, dict) and msg.get("end_of_turn"):
+                await self.session.send(input="", end_of_turn=True)
+                continue
             await self.session.send(input=msg, end_of_turn=False)
 
     async def listen_audio(self):
@@ -571,6 +575,9 @@ class AudioLoop:
                             print(f"[LEXI DEBUG] [VAD] Silence detected. Resetting speech state.")
                             self._is_speaking = False
                             self._silence_start_time = None
+                            # Signal end-of-turn so Gemini responds (fix: continuous stream gave 0 responses)
+                            if self.out_queue:
+                                await self.out_queue.put({"end_of_turn": True})
 
             except Exception as e:
                 print(f"Error reading audio: {e}")
@@ -835,7 +842,7 @@ Om du behöver mer info, ställ EN följdfråga."""
                 async for response in turn:
                     # 1. Handle Audio Data
                     if data := response.data:
-                        self.playback_generation.put(turn_generation, data)
+                        await self.playback_generation.put_async(turn_generation, data)
                         # NOTE: 'continue' removed here to allow processing transcription/tools in same packet
 
                     # 2. Handle Transcription (User & Model)
