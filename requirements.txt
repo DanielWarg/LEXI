@@ -27,3 +27,4 @@ pydantic
 mediapipe
 # CAD Generation
 build123d
+pytest>=8.0.0

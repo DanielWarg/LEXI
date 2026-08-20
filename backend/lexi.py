@@ -257,9 +257,10 @@ from web_agent import WebAgent
 from kasa_agent import KasaAgent
 from printer_agent import PrinterAgent
 from openclaw_agent import OpenClawAgent
+from voice_contracts import PlaybackGeneration, PlaybackQueue, TranscriptionBuffer
 
 class AudioLoop:
-    def __init__(self, video_mode=DEFAULT_MODE, on_audio_data=None, on_video_frame=None, on_cad_data=None, on_web_data=None, on_transcription=None, on_tool_confirmation=None, on_cad_status=None, on_cad_thought=None, on_cad_zoom=None, on_project_update=None, on_device_update=None, on_error=None, on_tool_activate=None, input_device_index=None, input_device_name=None, output_device_index=None, video_device_index=0, kasa_agent=None):
+    def __init__(self, video_mode=DEFAULT_MODE, on_audio_data=None, on_video_frame=None, on_cad_data=None, on_web_data=None, on_transcription=None, on_tool_confirmation=None, on_cad_status=None, on_cad_thought=None, on_cad_zoom=None, on_project_update=None, on_device_update=None, on_error=None, on_tool_activate=None, input_device_index=None, input_device_name=None, output_device_index=None, video_device_index=0, kasa_agent=None, playback_queue=None, playback_generation=None):
         self.video_mode = video_mode
         self.on_audio_data = on_audio_data
         self.on_video_frame = on_video_frame
@@ -279,19 +280,16 @@ class AudioLoop:
         self.output_device_index = output_device_index
         self.video_device_index = video_device_index
 
-        self.audio_in_queue = None
+        self.audio_in_queue = playback_queue or PlaybackQueue(maxsize=32)
+        self.playback_generation = playback_generation or PlaybackGeneration(self.audio_in_queue)
         self.out_queue = None
         self.paused = False
 
         self.chat_buffer = {"sender": None, "text": ""} # For aggregating chunks
         
         # Track last transcription text to calculate deltas (Gemini sends cumulative text)
-        self._last_input_transcription = ""
-        self._last_output_transcription = ""
-
-        self.audio_in_queue = None
-        self.out_queue = None
-        self.paused = False
+        self._input_transcription = TranscriptionBuffer()
+        self._output_transcription = TranscriptionBuffer()
 
         self.session = None
         
@@ -349,8 +347,8 @@ class AudioLoop:
             self.project_manager.log_chat(self.chat_buffer["sender"], self.chat_buffer["text"])
             self.chat_buffer = {"sender": None, "text": ""}
         # Reset transcription tracking for new turn
-        self._last_input_transcription = ""
-        self._last_output_transcription = ""
+        self._input_transcription.reset()
+        self._output_transcription.reset()
 
     def update_permissions(self, new_perms):
         print(f"[LEXI DEBUG] [CONFIG] Updating tool permissions: {new_perms}")
@@ -386,10 +384,8 @@ class AudioLoop:
     def clear_audio_queue(self):
         # ... (unchanged)
         try:
-            count = 0
-            while not self.audio_in_queue.empty():
-                self.audio_in_queue.get_nowait()
-                count += 1
+            count = self.audio_in_queue.clear()
+            self.playback_generation.clear()
             if count > 0:
                 print(f"[LEXI DEBUG] [AUDIO] Cleared {count} chunks from playback queue due to interruption.")
         except Exception as e:
@@ -829,11 +825,12 @@ Om du behöver mer info, ställ EN följdfråga."""
         "Background task to reads from the websocket and write pcm chunks to the output queue"
         try:
             while True:
+                turn_generation = self.playback_generation.generation
                 turn = self.session.receive()
                 async for response in turn:
                     # 1. Handle Audio Data
                     if data := response.data:
-                        self.audio_in_queue.put_nowait(data)
+                        self.playback_generation.put(turn_generation, data)
                         # NOTE: 'continue' removed here to allow processing transcription/tools in same packet
 
                     # 2. Handle Transcription (User & Model)
@@ -841,61 +838,45 @@ Om du behöver mer info, ställ EN följdfråga."""
                         if response.server_content.input_transcription:
                             transcript = response.server_content.input_transcription.text
                             if transcript:
-                                # Skip if this is an exact duplicate event
-                                if transcript != self._last_input_transcription:
-                                    # Calculate delta (Gemini may send cumulative or chunk-based text)
-                                    delta = transcript
-                                    if transcript.startswith(self._last_input_transcription):
-                                        delta = transcript[len(self._last_input_transcription):]
-                                    self._last_input_transcription = transcript
-                                    
-                                    # Only send if there's new text
-                                    if delta:
-                                        # User is speaking, so interrupt model playback!
-                                        self.clear_audio_queue()
+                                delta = self._input_transcription.process(transcript)
+                                if delta:
+                                    # User is speaking, so interrupt model playback!
+                                    self.clear_audio_queue()
 
-                                        # Send to frontend (Streaming)
-                                        if self.on_transcription:
-                                             self.on_transcription({"sender": "User", "text": delta})
-                                        
-                                        # Buffer for Logging
-                                        if self.chat_buffer["sender"] != "User":
-                                            # Flush previous if exists
-                                            if self.chat_buffer["sender"] and self.chat_buffer["text"].strip():
-                                                self.project_manager.log_chat(self.chat_buffer["sender"], self.chat_buffer["text"])
-                                            # Start new
-                                            self.chat_buffer = {"sender": "User", "text": delta}
-                                        else:
-                                            # Append
-                                            self.chat_buffer["text"] += delta
+                                    # Send to frontend (Streaming)
+                                    if self.on_transcription:
+                                         self.on_transcription({"sender": "User", "text": delta})
+
+                                    # Buffer for Logging
+                                    if self.chat_buffer["sender"] != "User":
+                                        # Flush previous if exists
+                                        if self.chat_buffer["sender"] and self.chat_buffer["text"].strip():
+                                            self.project_manager.log_chat(self.chat_buffer["sender"], self.chat_buffer["text"])
+                                        # Start new
+                                        self.chat_buffer = {"sender": "User", "text": delta}
+                                    else:
+                                        # Append
+                                        self.chat_buffer["text"] += delta
                         
                         if response.server_content.output_transcription:
                             transcript = response.server_content.output_transcription.text
                             if transcript:
-                                # Skip if this is an exact duplicate event
-                                if transcript != self._last_output_transcription:
-                                    # Calculate delta (Gemini may send cumulative or chunk-based text)
-                                    delta = transcript
-                                    if transcript.startswith(self._last_output_transcription):
-                                        delta = transcript[len(self._last_output_transcription):]
-                                    self._last_output_transcription = transcript
-                                    
-                                    # Only send if there's new text
-                                    if delta:
-                                        # Send to frontend (Streaming)
-                                        if self.on_transcription:
-                                             self.on_transcription({"sender": "Lexi", "text": delta})
-                                        
-                                        # Buffer for Logging
-                                        if self.chat_buffer["sender"] != "Lexi":
-                                            # Flush previous
-                                            if self.chat_buffer["sender"] and self.chat_buffer["text"].strip():
-                                                self.project_manager.log_chat(self.chat_buffer["sender"], self.chat_buffer["text"])
-                                            # Start new
-                                            self.chat_buffer = {"sender": "Lexi", "text": delta}
-                                        else:
-                                            # Append
-                                            self.chat_buffer["text"] += delta
+                                delta = self._output_transcription.process(transcript)
+                                if delta:
+                                    # Send to frontend (Streaming)
+                                    if self.on_transcription:
+                                         self.on_transcription({"sender": "Lexi", "text": delta})
+
+                                    # Buffer for Logging
+                                    if self.chat_buffer["sender"] != "Lexi":
+                                        # Flush previous
+                                        if self.chat_buffer["sender"] and self.chat_buffer["text"].strip():
+                                            self.project_manager.log_chat(self.chat_buffer["sender"], self.chat_buffer["text"])
+                                        # Start new
+                                        self.chat_buffer = {"sender": "Lexi", "text": delta}
+                                    else:
+                                        # Append
+                                        self.chat_buffer["text"] += delta
                         
                         # Flush buffer on turn completion if needed, 
                         # but usually better to wait for sender switch or explicit end.
@@ -1325,8 +1306,7 @@ Om du behöver mer info, ställ EN följdfråga."""
                 # Turn/Response Loop Finished
                 self.flush_chat()
 
-                while not self.audio_in_queue.empty():
-                    self.audio_in_queue.get_nowait()
+                self.audio_in_queue.clear()
         except Exception as e:
             print(f"Error in receive_audio: {e}")
             traceback.print_exc()
@@ -1386,7 +1366,7 @@ Om du behöver mer info, ställ EN följdfråga."""
                     pass # Should not happen on standard Python installs
             
             # PERFORMANCE DEBUG
-            queue_size = self.audio_in_queue.qsize()
+            queue_size = self.audio_in_queue.qsize
             if queue_size % 20 == 0:  # Log every 20th chunk to reduce spam
                 print(f"[PERF] Audio chunk. Queue size: {queue_size}")
             
@@ -1400,7 +1380,7 @@ Om du behöver mer info, ställ EN följdfråga."""
             # NO DELAY - let audio play as fast as possible
             
             # Check if queue is empty - if so, we're done speaking
-            if self.audio_in_queue.empty():
+            if self.audio_in_queue.empty:
                 # Longer wait to prevent echo - audio needs to finish playing
                 # and room reverb needs to settle
                 await asyncio.sleep(0.6)
@@ -1455,7 +1435,8 @@ Om du behöver mer info, ställ EN följdfråga."""
                 ):
                     self.session = session
 
-                    self.audio_in_queue = asyncio.Queue()
+                    self.audio_in_queue = PlaybackQueue(maxsize=32)
+                    self.playback_generation = PlaybackGeneration(self.audio_in_queue)
                     self.out_queue = asyncio.Queue(maxsize=10)
 
                     tg.create_task(self.send_realtime())
