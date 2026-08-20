@@ -30,7 +30,7 @@ SEND_SAMPLE_RATE = 16000
 RECEIVE_SAMPLE_RATE = 24000
 CHUNK_SIZE = 1024
 
-MODEL = "models/gemini-2.5-flash-native-audio-latest"
+MODEL = "models/gemini-3.1-flash-live-preview"
 DEFAULT_MODE = "camera"
 
 load_dotenv()
@@ -423,10 +423,7 @@ class AudioLoop:
         text = (text or "").strip()
         if not text:
             return
-        await self.session.send_client_content(
-            turns=[types.Content(role="user", parts=[types.Part(text=text)])],
-            turn_complete=True,
-        )
+        await self.session.send_realtime_input(text=text)
 
     async def _transcribe_and_send_turn(self, chunks):
         try:
@@ -637,7 +634,7 @@ class AudioLoop:
                 self.project_manager.switch_project(new_project_name)
                 # Notify User (Optional, or rely on update)
                 try:
-                    await self.session.send(input=f"Systemmeddelande: Automatiskt skapande av projekt. Har bytt till det nya projektet '{new_project_name}'.", end_of_turn=False)
+                    await self.session.send_realtime_input(text=f"Systemmeddelande: Automatiskt skapande av projekt. Har bytt till det nya projektet '{new_project_name}'.")
                     if self.on_project_update:
                          self.on_project_update(new_project_name)
                 except Exception as e:
@@ -677,7 +674,7 @@ class AudioLoop:
             # Notify the model that the task is done - this triggers speech about completion
             completion_msg = "Systemmeddelande: CAD-genereringen är klar! 3D-modellen visas nu för användaren. Berätta för henne att den är redo."
             try:
-                await self.session.send(input=completion_msg, end_of_turn=True)
+                await self.session.send_realtime_input(text=completion_msg)
                 print(f"[LEXI DEBUG] [NOTE] Sent completion notification to model.")
             except Exception as e:
                  print(f"[LEXI DEBUG] [ERR] Failed to send completion notification: {e}")
@@ -686,7 +683,7 @@ class AudioLoop:
             print(f"[LEXI DEBUG] [ERR] CadAgent returned None.")
             # Optionally notify failure
             try:
-                await self.session.send(input="Systemmeddelande: CAD-genereringen misslyckades.", end_of_turn=True)
+                await self.session.send_realtime_input(text="Systemmeddelande: CAD-genereringen misslyckades.")
             except Exception:
                 pass
 
@@ -707,7 +704,7 @@ class AudioLoop:
                 self.project_manager.switch_project(new_project_name)
                 # Notify User
                 try:
-                    await self.session.send(input=f"Systemmeddelande: Automatiskt skapande av projekt. Har bytt till det nya projektet '{new_project_name}'.", end_of_turn=False)
+                    await self.session.send_realtime_input(text=f"Systemmeddelande: Automatiskt skapande av projekt. Har bytt till det nya projektet '{new_project_name}'.")
                     if self.on_project_update:
                          self.on_project_update(new_project_name)
                 except Exception as e:
@@ -742,7 +739,7 @@ class AudioLoop:
 
         print(f"[LEXI DEBUG] [FS] Result: {result}")
         try:
-             await self.session.send(input=f"Systemmeddelande: {result}", end_of_turn=True)
+             await self.session.send_realtime_input(text=f"Systemmeddelande: {result}")
         except Exception as e:
              print(f"[LEXI DEBUG] [ERR] Failed to send fs result: {e}")
 
@@ -759,7 +756,7 @@ class AudioLoop:
 
         print(f"[LEXI DEBUG] [FS] Result: {result}")
         try:
-             await self.session.send(input=f"Systemmeddelande: {result}", end_of_turn=True)
+             await self.session.send_realtime_input(text=f"Systemmeddelande: {result}")
         except Exception as e:
              print(f"[LEXI DEBUG] [ERR] Failed to send fs result: {e}")
 
@@ -777,7 +774,7 @@ class AudioLoop:
 
         print(f"[LEXI DEBUG] [FS] Result: {result}")
         try:
-             await self.session.send(input=f"Systemmeddelande: {result}", end_of_turn=True)
+             await self.session.send_realtime_input(text=f"Systemmeddelande: {result}")
         except Exception as e:
              print(f"[LEXI DEBUG] [ERR] Failed to send fs result: {e}")
 
@@ -801,7 +798,7 @@ class AudioLoop:
         
         # Send the final result back to the main model
         try:
-             await self.session.send(input=f"Systemmeddelande: Webbagenten är klar.\nResultat: {result}", end_of_turn=True)
+             await self.session.send_realtime_input(text=f"Systemmeddelande: Webbagenten är klar.\nResultat: {result}")
         except Exception as e:
              print(f"[LEXI DEBUG] [ERR] Failed to send web agent result to model: {e}")
 
@@ -814,7 +811,7 @@ class AudioLoop:
             error_msg = "OpenClaw är inte konfigurerad. Ange URL i inställningarna."
             print(f"[LEXI] [OPENCLAW] ERROR: {error_msg}")
             try:
-                await self.session.send(input=f"Systemmeddelande: {error_msg}", end_of_turn=True)
+                await self.session.send_realtime_input(text=f"Systemmeddelande: {error_msg}")
             except Exception as e:
                 print(f"[LEXI] [OPENCLAW] Failed to send error: {e}")
             return
@@ -843,9 +840,8 @@ Om du behöver mer info, ställ EN följdfråga."""
 
             # Send result back to Lexi's model
             try:
-                await self.session.send(
-                    input=f"Systemmeddelande: Svar från OpenClaw:\n{response_text}\n\nLäs upp detta svar för användaren på ett naturligt sätt.",
-                    end_of_turn=True
+                await self.session.send_realtime_input(
+                    text=f"Systemmeddelande: Svar från OpenClaw:\n{response_text}\n\nLäs upp detta svar för användaren på ett naturligt sätt."
                 )
             except Exception as e:
                 print(f"[LEXI] [OPENCLAW] Failed to send result to model: {e}")
@@ -853,9 +849,8 @@ Om du behöver mer info, ställ EN följdfråga."""
             error_msg = result.get("error", "Okänt fel")
             print(f"[LEXI] [OPENCLAW] Task failed: {error_msg}")
             try:
-                await self.session.send(
-                    input=f"Systemmeddelande: OpenClaw-uppgiften misslyckades: {error_msg}",
-                    end_of_turn=True
+                await self.session.send_realtime_input(
+                    text=f"Systemmeddelande: OpenClaw-uppgiften misslyckades: {error_msg}"
                 )
             except Exception as e:
                 print(f"[LEXI] [OPENCLAW] Failed to send error: {e}")
@@ -1055,7 +1050,7 @@ Om du behöver mer info, ställ EN följdfråga."""
                                         context = self.project_manager.get_project_context()
                                         print(f"[LEXI] [PROJECT] Sending project context to AI ({len(context)} chars)")
                                         try:
-                                            await self.session.send(input=f"System Notification: {msg}\n\n{context}", end_of_turn=False)
+                                            await self.session.send_realtime_input(text=f"System Notification: {msg}\n\n{context}")
                                         except Exception as e:
                                             print(f"[LEXI] [ERR] Failed to send project context: {e}")
                                     function_response = types.FunctionResponse(
@@ -1489,7 +1484,7 @@ Om du behöver mer info, ställ EN följdfråga."""
                     if not is_reconnect:
                         if start_message:
                             print(f"[LEXI] [INFO] Sending start message: {start_message}")
-                            await self.session.send(input=start_message, end_of_turn=True)
+                            await self.session.send_realtime_input(text=start_message)
                         
                         # Sync Project State
                         if self.on_project_update and self.project_manager:
@@ -1510,8 +1505,7 @@ Om du behöver mer info, ställ EN följdfråga."""
                         context_msg += "\nFortsätt samtalet naturligt utan att nämna tekniska avbrott. Vänta på att användaren säger något innan du svarar."
 
                         print(f"[LEXI] [RECONNECT] Sending restoration context to model...")
-                        # end_of_turn=False so Lexi waits for user input instead of speaking spontaneously
-                        await self.session.send(input=context_msg, end_of_turn=False)
+                        await self.session.send_realtime_input(text=context_msg)
 
                     # Reset retry delay on successful connection
                     retry_delay = 1

@@ -37,14 +37,14 @@ def test_transcriber_converts_pcm_chunks_to_text():
 
 
 @pytest.mark.asyncio
-async def test_send_text_turn_uses_client_content_user_turn():
+async def test_send_text_turn_uses_realtime_input():
     from lexi import AudioLoop
 
     class FakeSession:
         def __init__(self):
             self.calls = []
 
-        async def send_client_content(self, **kwargs):
+        async def send_realtime_input(self, **kwargs):
             self.calls.append(kwargs)
 
     loop = AudioLoop.__new__(AudioLoop)
@@ -53,7 +53,4 @@ async def test_send_text_turn_uses_client_content_user_turn():
     await loop.send_text_turn("Hej Lexi")
 
     call = loop.session.calls[0]
-    assert call["turn_complete"] is True
-    assert len(call["turns"]) == 1
-    assert call["turns"][0].role == "user"
-    assert call["turns"][0].parts[0].text == "Hej Lexi"
+    assert call == {"text": "Hej Lexi"}
