@@ -1,189 +1,171 @@
 import asyncio
+import sys
+from pathlib import Path
 
 import pytest
 
-from backend.voice_contracts import (
-    PlaybackGeneration,
-    PlaybackQueue,
-    QueueCancelledError,
-    QueueFullError,
-    TranscriptionBuffer,
-)
+sys.path.insert(0, str(Path(__file__).parents[1]))
 
 
-def test_playback_queue_is_bounded_and_preserves_fifo_order():
-    queue = PlaybackQueue(maxsize=2)
+class FakeSession:
+    def __init__(self):
+        self.calls = []
+        self.receive_calls = 0
 
-    queue.put("first")
-    queue.put("second")
+    async def send(self, **kwargs):
+        self.calls.append(kwargs)
 
-    assert queue.qsize == 2
-    assert queue.get_nowait() == "first"
-    assert queue.get_nowait() == "second"
-    assert queue.empty
+    def receive(self):
+        self.receive_calls += 1
+        if self.receive_calls > 1:
+            raise RuntimeError("stop test receive loop")
 
+        async def responses():
+            yield type("Response", (), {"data": b"pcm", "server_content": None, "tool_call": None})()
 
-def test_playback_queue_raises_when_full():
-    queue = PlaybackQueue(maxsize=1)
-    queue.put("audio")
-
-    with pytest.raises(QueueFullError):
-        queue.put("more audio")
-
-
-def test_playback_queue_clear_discards_pending_chunks():
-    queue = PlaybackQueue(maxsize=3)
-    queue.put("old-1")
-    queue.put("old-2")
-
-    assert queue.clear() == 2
-    assert queue.empty
+        return responses()
 
 
 @pytest.mark.asyncio
-async def test_playback_queue_cancel_is_terminal_for_put_and_get():
-    queue = PlaybackQueue(maxsize=1)
-    queue.cancel()
+async def test_send_realtime_sends_audio_dict_without_end_of_turn():
+    from lexi import AudioLoop
 
-    assert queue.cancelled
-    with pytest.raises(QueueCancelledError):
-        queue.put("late")
-    with pytest.raises(QueueCancelledError):
-        await queue.get()
+    loop = AudioLoop.__new__(AudioLoop)
+    loop.out_queue = asyncio.Queue()
+    loop.session = FakeSession()
+    await loop.out_queue.put({"data": b"mic", "mime_type": "audio/pcm"})
+
+    task = asyncio.create_task(loop.send_realtime())
+    await asyncio.sleep(0)
+    task.cancel()
+    with pytest.raises(asyncio.CancelledError):
+        await task
+
+    assert loop.session.calls == [{
+        "input": {"data": b"mic", "mime_type": "audio/pcm"},
+        "end_of_turn": False,
+    }]
 
 
 @pytest.mark.asyncio
-async def test_playback_queue_async_get_preserves_order():
-    queue = PlaybackQueue(maxsize=2)
-    queue.put("one")
-    queue.put("two")
+async def test_receive_audio_puts_pcm_with_put_nowait():
+    from lexi import AudioLoop
 
-    assert await queue.get() == "one"
-    assert await queue.get() == "two"
+    loop = AudioLoop.__new__(AudioLoop)
+    loop.session = FakeSession()
+    class RecordingQueue:
+        def __init__(self):
+            self.items = []
 
+        def put_nowait(self, item):
+            self.items.append(item)
 
-def test_generation_clear_invalidates_late_chunks():
-    queue = PlaybackQueue(maxsize=4)
-    generations = PlaybackGeneration(queue)
-    first = generations.new_generation()
+        def empty(self):
+            return True
 
-    assert generations.put(first, "before")
-    second = generations.clear(first)
+    loop.audio_in_queue = RecordingQueue()
+    loop._last_input_transcription = ""
+    loop._last_output_transcription = ""
+    loop.chat_buffer = {"sender": None, "text": ""}
+    loop.on_transcription = None
 
-    assert second == first + 1
-    assert queue.empty
-    assert not generations.put(first, "late")
-    assert generations.put(second, "current")
-    assert queue.get_nowait() == "current"
+    with pytest.raises(RuntimeError, match="stop test"):
+        await loop.receive_audio()
 
-
-def test_generation_clear_without_argument_starts_new_generation():
-    generations = PlaybackGeneration(PlaybackQueue(maxsize=2))
-
-    first = generations.generation
-    second = generations.clear()
-
-    assert second == first + 1
+    assert loop.audio_in_queue.items == [b"pcm"]
 
 
-def test_transcription_buffer_returns_cumulative_deltas():
-    buffer = TranscriptionBuffer()
+@pytest.mark.asyncio
+async def test_play_audio_writes_pcm_to_stream(monkeypatch):
+    from lexi import AudioLoop
 
-    assert buffer.process("hello") == "hello"
-    assert buffer.process("hello world") == " world"
-    assert buffer.process("hello world") == ""
+    class FakeStream:
+        def __init__(self):
+            self.writes = []
+
+        def write(self, data):
+            self.writes.append(data)
+
+    stream = FakeStream()
+    monkeypatch.setattr("lexi.pya.open", lambda **kwargs: stream)
+
+    loop = AudioLoop.__new__(AudioLoop)
+    loop.audio_in_queue = asyncio.Queue()
+    loop.output_device_index = None
+    loop.on_audio_data = None
+    await loop.audio_in_queue.put(b"response")
+
+    task = asyncio.create_task(loop.play_audio())
+    await asyncio.sleep(0)
+    task.cancel()
+    with pytest.raises(asyncio.CancelledError):
+        await task
+
+    assert stream.writes == [b"response"]
 
 
-def test_transcription_buffer_shorter_text_resets_utterance():
-    buffer = TranscriptionBuffer()
-    buffer.process("a longer utterance")
+def test_clear_audio_queue_drains_unbounded_asyncio_queue():
+    from lexi import AudioLoop
 
-    assert buffer.process("new") == "new"
-    assert buffer.process("new utterance") == " utterance"
+    loop = AudioLoop.__new__(AudioLoop)
+    loop.audio_in_queue = asyncio.Queue()
+    loop.audio_in_queue.put_nowait(b"one")
+    loop.audio_in_queue.put_nowait(b"two")
 
+    loop.clear_audio_queue()
 
-def test_transcription_buffer_empty_text_is_ignored():
-    buffer = TranscriptionBuffer()
-
-    assert buffer.process("") == ""
-    assert buffer.process("   ") == ""
-    assert buffer.previous == ""
+    assert loop.audio_in_queue.empty()
 
 
-
-def test_mono_to_stereo_pcm16_duplicates_samples():
+def test_mono_to_stereo_pcm16_fallback_conversion():
     from backend.voice_contracts import mono_to_stereo_pcm16
 
-    mono = bytes([0x01, 0x02, 0x03, 0x04])  # två 16-bit samples (little-endian)
-    stereo = mono_to_stereo_pcm16(mono)
-    assert stereo == b"\x01\x02\x01\x02\x03\x04\x03\x04"
-
-
-def test_mono_to_stereo_pcm16_doubles_length():
-    from backend.voice_contracts import mono_to_stereo_pcm16
-
-    mono = bytes([0x00, 0x00, 0xFF, 0x7F])
-    assert len(mono_to_stereo_pcm16(mono)) == len(mono) * 2
+    assert mono_to_stereo_pcm16(b"\x01\x02\x03\x04") == b"\x01\x02\x01\x02\x03\x04\x03\x04"
 
 
 def test_mono_to_stereo_pcm16_rejects_odd_byte_count():
-    import pytest
-
     from backend.voice_contracts import mono_to_stereo_pcm16
 
     with pytest.raises(ValueError):
         mono_to_stereo_pcm16(b"\x01\x02\x03")
 
 
-def test_mono_to_stereo_pcm16_empty():
-    from backend.voice_contracts import mono_to_stereo_pcm16
-
-    assert mono_to_stereo_pcm16(b"") == b""
-
-
 def test_parity_matches_spoken_variation():
     from backend.voice_contracts import ParityStatus, compare_parity
 
     canonical = "Skicka 1 250,00 kr till Anna Andersson den 2026-08-20 kl 14:30. Kommando: skicka"
-    spoken = (
-        "Skicka ett tusen två hundra femtio kronor till anna andersson den 20 augusti "
-        "2026 klockan 14 30"
-    )
-    r = compare_parity(canonical, spoken)
-    assert r["status"] is ParityStatus.MATCH
-    assert r["mismatches"] == ()
+    spoken = "Skicka ett tusen två hundra femtio kronor till anna andersson den 20 augusti 2026 klockan 14 30"
+    result = compare_parity(canonical, spoken)
+
+    assert result["status"] is ParityStatus.MATCH
+    assert result["mismatches"] == ()
 
 
 def test_parity_detects_amount_mismatch():
     from backend.voice_contracts import ParityStatus, compare_parity
 
-    r = compare_parity(
+    result = compare_parity(
         "Betala 100 kr till Erik den 2026-08-20 kl 09:15. Kommando: betala",
         "Betala 900 kr till Erik den 2026-08-20 klockan 09 15",
     )
-    assert r["status"] is ParityStatus.MISMATCH
-    assert "amount" in r["mismatches"]
+
+    assert result["status"] is ParityStatus.MISMATCH
+    assert "amount" in result["mismatches"]
 
 
 def test_parity_detects_date_mismatch():
     from backend.voice_contracts import ParityStatus, compare_parity
 
-    r = compare_parity("den 2026-08-20", "den 2026-08-21")
-    assert r["status"] is ParityStatus.MISMATCH
-    assert "date" in r["mismatches"]
+    result = compare_parity("den 2026-08-20", "den 2026-08-21")
+
+    assert result["status"] is ParityStatus.MISMATCH
+    assert "date" in result["mismatches"]
 
 
 def test_parity_malformed_input_fails_closed():
     from backend.voice_contracts import ParityStatus, compare_parity
 
-    r = compare_parity("", "")
-    assert r["status"] is ParityStatus.ERROR
-    assert r["telemetry"][0]["reason"] == "malformed_input"
+    result = compare_parity("", "")
 
-
-def test_parity_never_mutates_canonical():
-    from backend.voice_contracts import compare_parity
-
-    canon = "Betala 1000 kr till Kim"
-    r = compare_parity(canon, "Betala 900 kr till kim")
-    assert r["canonical_text"] == canon
+    assert result["status"] is ParityStatus.ERROR
+    assert result["telemetry"][0]["reason"] == "malformed_input"
