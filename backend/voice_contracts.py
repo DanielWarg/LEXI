@@ -154,3 +154,16 @@ class TranscriptionBuffer:
     def reset(self) -> None:
         self._previous = ""
 
+
+def mono_to_stereo_pcm16(mono: bytes) -> bytes:
+    """Convert mono PCM16 (16-bit little-endian) to stereo by duplicating samples.
+
+    Deterministic replacement for the deprecated ``audioop.tostereo(data, 2, 1, 1)``.
+    A mono sample ``XY`` becomes stereo ``XYXY`` (same value on left and right).
+    Rejects an odd byte count (a mono 16-bit buffer must have an even number of
+    bytes, otherwise it is malformed).
+    """
+    if len(mono) % 2 != 0:
+        raise ValueError(f"mono PCM16 byte count must be even, got {len(mono)}")
+    return b"".join(mono[i : i + 2] + mono[i : i + 2] for i in range(0, len(mono), 2))
+

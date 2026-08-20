@@ -257,7 +257,12 @@ from web_agent import WebAgent
 from kasa_agent import KasaAgent
 from printer_agent import PrinterAgent
 from openclaw_agent import OpenClawAgent
-from voice_contracts import PlaybackGeneration, PlaybackQueue, TranscriptionBuffer
+from voice_contracts import (
+    PlaybackGeneration,
+    PlaybackQueue,
+    TranscriptionBuffer,
+    mono_to_stereo_pcm16,
+)
 
 class AudioLoop:
     def __init__(self, video_mode=DEFAULT_MODE, on_audio_data=None, on_video_frame=None, on_cad_data=None, on_web_data=None, on_transcription=None, on_tool_confirmation=None, on_cad_status=None, on_cad_thought=None, on_cad_zoom=None, on_project_update=None, on_device_update=None, on_error=None, on_tool_activate=None, input_device_index=None, input_device_name=None, output_device_index=None, video_device_index=0, kasa_agent=None, playback_queue=None, playback_generation=None):
@@ -1356,14 +1361,9 @@ Om du behöver mer info, ställ EN följdfråga."""
         while True:
             bytestream = await self.audio_in_queue.get()
 
-            # Handle Stereo Conversion
+            # Handle Stereo Conversion (deterministic PCM16, replaces deprecated audioop)
             if stereo_mode:
-                try:
-                    import audioop
-                    # Convert Mono to Stereo: width=2 (16-bit), factors 1.0
-                    bytestream = audioop.tostereo(bytestream, 2, 1, 1)
-                except ImportError:
-                    pass # Should not happen on standard Python installs
+                bytestream = mono_to_stereo_pcm16(bytestream)
             
             # PERFORMANCE DEBUG
             queue_size = self.audio_in_queue.qsize

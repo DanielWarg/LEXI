@@ -109,3 +109,33 @@ def test_transcription_buffer_empty_text_is_ignored():
     assert buffer.process("   ") == ""
     assert buffer.previous == ""
 
+
+
+def test_mono_to_stereo_pcm16_duplicates_samples():
+    from backend.voice_contracts import mono_to_stereo_pcm16
+
+    mono = bytes([0x01, 0x02, 0x03, 0x04])  # två 16-bit samples (little-endian)
+    stereo = mono_to_stereo_pcm16(mono)
+    assert stereo == b"\x01\x02\x01\x02\x03\x04\x03\x04"
+
+
+def test_mono_to_stereo_pcm16_doubles_length():
+    from backend.voice_contracts import mono_to_stereo_pcm16
+
+    mono = bytes([0x00, 0x00, 0xFF, 0x7F])
+    assert len(mono_to_stereo_pcm16(mono)) == len(mono) * 2
+
+
+def test_mono_to_stereo_pcm16_rejects_odd_byte_count():
+    import pytest
+
+    from backend.voice_contracts import mono_to_stereo_pcm16
+
+    with pytest.raises(ValueError):
+        mono_to_stereo_pcm16(b"\x01\x02\x03")
+
+
+def test_mono_to_stereo_pcm16_empty():
+    from backend.voice_contracts import mono_to_stereo_pcm16
+
+    assert mono_to_stereo_pcm16(b"") == b""
