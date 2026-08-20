@@ -3,7 +3,7 @@ uvicorn
 python-socketio
 python-multipart
 # Google GenAI SDK (v1beta)
-google-genai
+google-genai==2.0.0
 # Computer Vision & Audio
 opencv-python
 pyaudio
