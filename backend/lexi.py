@@ -263,9 +263,10 @@ from voice_contracts import (
     TranscriptionBuffer,
     mono_to_stereo_pcm16,
 )
+from stt import Transcriber
 
 class AudioLoop:
-    def __init__(self, video_mode=DEFAULT_MODE, on_audio_data=None, on_video_frame=None, on_cad_data=None, on_web_data=None, on_transcription=None, on_tool_confirmation=None, on_cad_status=None, on_cad_thought=None, on_cad_zoom=None, on_project_update=None, on_device_update=None, on_error=None, on_tool_activate=None, input_device_index=None, input_device_name=None, output_device_index=None, video_device_index=0, kasa_agent=None, playback_queue=None, playback_generation=None):
+    def __init__(self, video_mode=DEFAULT_MODE, on_audio_data=None, on_video_frame=None, on_cad_data=None, on_web_data=None, on_transcription=None, on_tool_confirmation=None, on_cad_status=None, on_cad_thought=None, on_cad_zoom=None, on_project_update=None, on_device_update=None, on_error=None, on_tool_activate=None, input_device_index=None, input_device_name=None, output_device_index=None, video_device_index=0, kasa_agent=None, playback_queue=None, playback_generation=None, transcriber=None, enable_hybrid_stt=True):
         self.video_mode = video_mode
         self.on_audio_data = on_audio_data
         self.on_video_frame = on_video_frame
@@ -326,6 +327,10 @@ class AudioLoop:
         # VAD State
         self._is_speaking = False
         self._silence_start_time = None
+        self._utterance_chunks = []
+        self.transcriber = transcriber or Transcriber()
+        self.enable_hybrid_stt = enable_hybrid_stt
+        self._stt_task = None
         
         # Echo Cancellation: Track when Lexi is speaking to drop mic input
         self.is_speaking = False
@@ -412,6 +417,25 @@ class AudioLoop:
         while True:
             msg = await self.out_queue.get()
             await self.session.send(input=msg, end_of_turn=False)
+
+    async def send_text_turn(self, text):
+        """Send a completed user text turn; Gemini Live returns audio for it."""
+        text = (text or "").strip()
+        if not text:
+            return
+        await self.session.send_client_content(
+            turns=[types.Content(role="user", parts=[types.Part(text=text)])],
+            turn_complete=True,
+        )
+
+    async def _transcribe_and_send_turn(self, chunks):
+        try:
+            text = await asyncio.to_thread(self.transcriber.transcribe_pcm_chunks, chunks)
+            if text:
+                print(f"[LEXI] [HYBRID STT] {text}")
+                await self.send_text_turn(text)
+        except Exception as e:
+            print(f"[LEXI] [HYBRID STT] Error: {e}")
 
     async def listen_audio(self):
         mic_info = pya.get_default_input_device_info()
@@ -529,6 +553,9 @@ class AudioLoop:
                 if self.is_speaking:
                     # Skip sending this audio chunk to prevent feedback loop
                     continue
+
+                if self.enable_hybrid_stt:
+                    self._utterance_chunks.append(data)
                 
                 # 1. Send Audio (continuous stream, as original working code)
                 if self.out_queue:
@@ -552,6 +579,7 @@ class AudioLoop:
                     if not self._is_speaking:
                         # NEW Speech Utterance Started
                         self._is_speaking = True
+                        self.clear_audio_queue()
                         print(f"[LEXI DEBUG] [VAD] Speech Detected (RMS: {rms}). Sending Video Frame.")
                         
                         # Send ONE frame
@@ -571,6 +599,12 @@ class AudioLoop:
                             print(f"[LEXI DEBUG] [VAD] Silence detected. Resetting speech state.")
                             self._is_speaking = False
                             self._silence_start_time = None
+                            if self.enable_hybrid_stt and self._utterance_chunks:
+                                chunks = self._utterance_chunks
+                                self._utterance_chunks = []
+                                self._stt_task = asyncio.create_task(
+                                    self._transcribe_and_send_turn(chunks)
+                                )
 
             except Exception as e:
                 print(f"Error reading audio: {e}")
