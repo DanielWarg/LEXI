@@ -30,7 +30,7 @@ SEND_SAMPLE_RATE = 16000
 RECEIVE_SAMPLE_RATE = 24000
 CHUNK_SIZE = 1024
 
-MODEL = "models/gemini-2.5-flash-native-audio-preview-12-2025"
+MODEL = "models/gemini-2.5-flash-native-audio-latest"
 DEFAULT_MODE = "camera"
 
 load_dotenv()
@@ -411,10 +411,6 @@ class AudioLoop:
     async def send_realtime(self):
         while True:
             msg = await self.out_queue.get()
-            # End-of-turn marker → send with end_of_turn=True so Gemini responds
-            if isinstance(msg, dict) and msg.get("end_of_turn"):
-                await self.session.send(input="", end_of_turn=True)
-                continue
             await self.session.send(input=msg, end_of_turn=False)
 
     async def listen_audio(self):
@@ -534,7 +530,7 @@ class AudioLoop:
                     # Skip sending this audio chunk to prevent feedback loop
                     continue
                 
-                # 1. Send Audio
+                # 1. Send Audio (continuous stream, as original working code)
                 if self.out_queue:
                     await self.out_queue.put({"data": data, "mime_type": "audio/pcm"})
                 
@@ -575,9 +571,6 @@ class AudioLoop:
                             print(f"[LEXI DEBUG] [VAD] Silence detected. Resetting speech state.")
                             self._is_speaking = False
                             self._silence_start_time = None
-                            # Signal end-of-turn so Gemini responds (fix: continuous stream gave 0 responses)
-                            if self.out_queue:
-                                await self.out_queue.put({"end_of_turn": True})
 
             except Exception as e:
                 print(f"Error reading audio: {e}")
